@@ -1,4 +1,4 @@
-//requires jQuery
+//requires VkApiWrapper, jQuery, highslide, spin.js
 
 var Settings = {
 	vkUserId        : null,
@@ -7,29 +7,30 @@ var Settings = {
 	getPhotosCunksSz: 100,
 	errorHideAfter  : 3000,
 	likedThresh     : 1,
-	maxRatedPhotos  : 1000,
+	maxRatedPhotos  : 10000,
 	rateRequestDelay: 3000,
 	blinkDelay      : 500,
 	blinkCount      : 12,
-	vkAppLocation   : "http://vk.com/app3337781",
-	redirectDelay   : 3000
+	vkAppLocation   : "//vk.com/app3337781",
+	redirectDelay   : 3000,
+	
+	vkPhotoPopupSettings: 'toolbar=yes,scrollbars=yes,resizable=yes,width=1024,height=600',
+	addThumbDelay       : 250
 };
 
 /* Thumbs Container */
 (function( $, hs ) {
 	var defaults = {
-		AddThumbDelay: 250,
-		AjaxLoaderGifSrc: "loader.gif"
+		AddThumbDelay       : Settings.addThumbDelay,
+		vkPhotoPopupSettings: Settings.vkPhotoPopupSettings
 	};
-	
-	var preloadAjaxLoaderGif = $("<img />",{src: defaults.AjaxLoaderGifSrc});
 	
 	var methods = {
 		init: function(opts) {
 			var $this = $(this);
 			var options = $.extend(defaults, opts);
 			$this.addClass("ThumbsViewer-thumbs_container");
-			$this.on("click.ThumbsViewer", ".ThumbsViewer-thumb_block", function(event){methods.onSelClick__.call(this, $this)});
+			$this.on("click.ThumbsViewer", ".ThumbsViewer-thumb_block", function(event){methods.onSelClick__.call(this, event, $this)});
 			$this.on("click.ThumbsViewer", ".ThumbsViewer_zoom-ico", function(event){methods.onZoomClick__.call(this, event, $this)});
 			
 			var data = {
@@ -45,41 +46,29 @@ var Settings = {
 		//expects object img with property src
 		addThumb: function(img) {
 			var $this = $(this);
+			var thumb_parent = $("<div></div>", {class: "ThumbsViewer-thumb_block loading"});
 			
-			var thumb_li = $("<li></li>", {class: "ThumbsViewer-thumb_block"});
-			var thumb_parent = $("<a></a>");
+			var likesbox = '<div class="ui-state-default ThumbsViewer_likesBox ui-corner-br">&#10084; ' + img.likes.count + '</div>';
+		
+			var origUrl = "//vk.com/photo" + img.owner_id + "_" + img.pid;
+			var onClickOrigUrl = "var myWindow = window.open('" + origUrl + "', 'vk_photo', '" + defaults.vkPhotoPopupSettings + "', false); myWindow.focus();";
+			var captionStr = '&#10084; ' + img.likes.count + ', <a title="Оригинал фото" onclick="' + onClickOrigUrl + '">' + origUrl + '</a>';
 			
-			var likesbox = "<div class=\"ui-state-default ThumbsViewer_likesBox clear_fix ui-corner-br\"><div class=\"ui-icon ui-icon-heart\" style=\"float: left; display: inline-block\"></div><div style=\"float: left; display: inline-block; margin-right: 2px\">" + img.likes.count + "</div></div>";
-			thumb_parent.append($(likesbox));
-			
-			var loader_gif = $("<img />",{src: defaults.AjaxLoaderGifSrc, class: "ThumbsViewer_loader_gif"});
-			thumb_parent.append(loader_gif);
-			thumb_li.append(thumb_parent, $("<a class=\"bg\">&nbsp;</a>"));
-			
-			var zoom_icon = $("<div class=\"ThumbsViewer_zoom-ico\"><img src=\"Zoom-In-icon.png\"></div>");
-			zoom_icon.data('ThumbsViewer', {img_src: img.src_big});
-			thumb_parent.append(zoom_icon);
-			
+			var aa = $("<a></a>", {href: img.src_big, title: 'Увеличить', onclick: 'return hs.expand(this, hs.config1)'}).data({caption: captionStr});
+			var zoomIcon = $('<div class="ThumbsViewer_zoom-ico"></div>').append(aa);
+
 			var thumb_img = $("<img />");
 			thumb_img.load(function(){
-				loader_gif.replaceWith(thumb_img);
+				thumb_parent.removeClass('loading');
+				thumb_parent.addClass('showphoto');
+				thumb_parent.css('background-image', 'url(' + img.src + ')');
 			});
+			thumb_img.attr({src: img.src, title: "Открыть фото"});
 			
-			//make valid case for "people" according to number of likes
-			var lcstr = "" + img.likes.count;
-			var titlestr = "Понравилось " + lcstr;
-			if( (lcstr == "1") || (lcstr.length > 1) && (lcstr[lcstr.length-1] == "1") && (lcstr[lcstr.length-2] != "1") ){
-				titlestr += " человеку";
-			}else{
-				titlestr += " людям";
-			}
-			
-			thumb_img.attr({src: img.src, title: titlestr});
-
-			var data = {img: img};
-			thumb_li.data('ThumbsViewer', data);
-			
-			thumb_li.appendTo($this);
+			thumb_parent.append($(likesbox));
+			thumb_parent.append(zoomIcon);
+			thumb_parent.data('ThumbsViewer', {img: img});
+			thumb_parent.appendTo($this);
 		},
 		
 		removeThumb: function($thumb){
@@ -192,19 +181,18 @@ var Settings = {
 			});
 		},
 		
-		onSelClick__: function(parent){
-			$this = $(this);
+		onSelClick__: function(event, parent){
+			var $this = $(this);
 			var data = $this.data('ThumbsViewer');
-			var url = "http://vk.com/photo" + data.img.owner_id + "_" + data.img.pid;
-			var myWindow = window.open(url, "vk_photo",'width=800,height=600', false);
+			var url = "//vk.com/photo" + data.img.owner_id + "_" + data.img.pid;
+			var myWindow = window.open(url, 'vk_photo', defaults.vkPhotoPopupSettings, false);
 			myWindow.focus();
 		},
 		
 		onZoomClick__: function(event, parent){
-			$this = $(this);
-			var data   = $this.data('ThumbsViewer');
+			//do nothing here, using handler from <a onclick="...">
 			event.stopPropagation();
-			return hs.expand( $("<a></a>", {href: data.img_src}).get(0) );
+			return false;
 		}
 	};
 	
@@ -440,6 +428,7 @@ var MBPhApi = {
 	$totalPhotosSpan: null,
 	$ratedPhotosSpan: null,
 	$chosenPhotosSpan: null,
+	$ratingThreshSpin: null,
 	
 	ratedPhotos: [],
 	photosCount: 0,
@@ -452,6 +441,7 @@ var MBPhApi = {
 		this.$totalPhotosSpan = $("#totalPhotosNum");
 		this.$ratedPhotosSpan = $("#ratedPhotosNum");
 		this.$chosenPhotosSpan = $("#chosenPhotosNum");
+		this.$ratingThreshSpin = $("#RatingThreshold");
 		
 		this.vkUserList.item(1).value = Settings.vkUserId;
 		this.vkUserList.selectedIndex = 1;
@@ -490,6 +480,7 @@ var MBPhApi = {
 		self.vkIdEdit.disabled = dval;
 		self.vkUserList.disabled = dval;
 		self.vkGroupList.disabled = dval;
+		self.$ratingThreshSpin.spinner(dstr);
 	},
 	
 	onGoButton: function(){
@@ -500,11 +491,12 @@ var MBPhApi = {
 		self.disableControls(1);
 		$("#thumbs_container").ThumbsViewer("empty");
 		self.$chosenPhotosSpan.text("0");
+		Settings.likedThresh = +self.$ratingThreshSpin.spinner("value");
 		
 		getAllPhotosCount(ownerId).done(function(count){
 			self.photosCount = count;
 			
-			self.queryRatedPhotos(ownerId).done( function(){
+			self.queryRatedPhotos(ownerId).done(function(){
 				self.ratedPhotos = self.sortPhotosByRating(self.ratedPhotos);
 				if( self.ratedPhotos.length > Settings.maxRatedPhotos ){
 					self.ratedPhotos = self.ratedPhotos.slice(0, Settings.maxRatedPhotos);
@@ -519,7 +511,7 @@ var MBPhApi = {
 						self.rateRequest();
 					}, Settings.rateRequestDelay);
 				}else if ( !self.ratedPhotos.length ){ //no photos found
-					displayError("Не удалось составить рейтинг. Не найдено фотографий, которые нравятся >= 1 человеку!", "globalErrorBox", Settings.errorHideAfter);
+					displayError("Не удалось составить рейтинг! Не найдено фотографий, с рейтингом выше " + Settings.likedThresh, "globalErrorBox", Settings.errorHideAfter);
 				}
 			}).fail(function(){
 				self.disableControls(0);
@@ -622,7 +614,8 @@ var MBPhApi = {
 				$( "#rateus_dialog" ).dialog( "open" );
 				VK.api("storage.set", {key: "isRated", value: "1"});
 				
-				setTimeout(function(){blinkDiv("vk_like", Settings.blinkCount, Settings.blinkDelay);}, 1500);
+				var BlinkerDelay = 1500;
+				setTimeout(function(){blinkDiv("vk_like", Settings.blinkCount, Settings.blinkDelay);}, BlinkerDelay);
 			}else{
 				console.log(data.error.error_msg);
 			}
@@ -646,6 +639,8 @@ var MBPhApi = {
 		$("#goButton").button("enable");
 		$( "#welcome_dialog" ).dialog({autoOpen: false, modal: true, width: 550, position: { my: "center center-150", at: "center center", of: window }});
 		$( "#rateus_dialog" ).dialog({autoOpen: false, modal: false});
+		
+		$("#RatingThreshold").spinner({ min: 1, step: 1, max: 100});
 		
 		MBPhApi.init();		
 		showSpinner();

@@ -8,16 +8,18 @@
 	<link href="photoRating.css" rel="stylesheet" type="text/css" />
 	<link href="highslide.css" rel="stylesheet" type="text/css" />
 	
-	<script src="http://ajax.aspnetcdn.com/ajax/jQuery/jquery-1.8.3.min.js" type="text/javascript"></script>
-	<script src="http://code.jquery.com/ui/1.9.2/jquery-ui.min.js" type="text/javascript"></script>
+	<script src="//ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
+	<script src="//ajax.googleapis.com/ajax/libs/jqueryui/1.9.2/jquery-ui.min.js"></script>
+	<script src="//vk.com/js/api/xd_connection.js?2" type="text/javascript"></script>
+	
 	<script src="spin.js" type="text/javascript" charset="utf-8"></script>
-	<script src="highslide.js" type="text/javascript" charset="utf-8"></script>
-	<script src="http://vk.com/js/api/xd_connection.js?2" type="text/javascript"></script>
+	<script src="highslide-full.packed.js" type="text/javascript" charset="utf-8"></script>
+	<script src="highslide.config.js" type="text/javascript" charset="utf-8"></script>
 	<script src="photoRating.js" type="text/javascript" charset="utf-8"></script>
 </head>
 <body style="height: 800px;">
-	<div class="clear_fix adbox"><a href="http://vk.com/app3231070" target="_top">
-	<img src="icon75.jpg" height="30px" width="30px" class="adbox-logo"><div class="adbox-text">Рекомендуем<br /><strong>Перенос Фото 2.0</strong></div>
+	<div class="clear_fix adbox"><a href="//vk.com/app3231070" target="_top">
+	<img src="icon75.jpg" height="30px" width="30px" class="adbox-logo"><div class="adbox-text">Рекомендуем<br /><strong>Перенос Фото 3.0</strong></div>
 	</a>
 	</div>
 
@@ -66,8 +68,11 @@
 		<div id="NoteField"></div>
 		<div id="globalErrorBox"></div>
 		<br />
-		<div style="width: 100%; text-align: left">
+		<div style="width: 100%; text-align: left" class="clear_fix">
+			<div style="float: left; padding-top: 3px">
 			<strong>Фотографий всего/рейтинговых/отобрано: <span id="totalPhotosNum">0</span>/<span id="ratedPhotosNum">0</span>/<span id="chosenPhotosNum">0</span>.</strong>
+			</div>
+			<div style="overflow: hidden; text-align: right"><strong>Отображать фото с рейтингом выше:</strong> <input id="RatingThreshold" value="1" size="3"></div>
 		</div>
 		<br />
 	</div>
@@ -78,6 +83,10 @@
 	</div>
 	<hr width="100%" />
 
-	<div style="position: relative; left: 338px; margin-top: 20px" id="vk_like"></div>
+	<div style="width: 320px; display: table; margin-top: 20px; margin-left: auto; margin-right: auto;">
+		<div style="display: table-cell" id="vk_like"></div>
+		<div style="display: table-cell; vertical-align:middle"><a style="color: #2a5885; text-decoration: none; cursor: pointer" href="//vk.com/id105876" target="_top">&copy; Leonid Azarenkov</a></div>
+	</div>
+	<div id="addme"></div>
 </body>
 </html>

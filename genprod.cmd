@@ -1,3 +1,5 @@
-call "c:\Program Files\nodejs\nodejsvars.bat"
+call "c:\Utilites\nodejs\nodevars.bat"
 copy /Y *.* .\prod\*.*
-for %%F IN (*.js) DO @uglifyjs -mt -o .\prod\%%F %%F
+cd prod
+for %%F IN (*.js) DO uglifyjs %%F -m -o %%F
+pause

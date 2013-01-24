@@ -1,6 +1,6 @@
 /**
 * @file: highslide.css 
-* @version: 4.1.13
+* @version: 5.0.0
 */
 .highslide-container div {
 	font-family: Verdana, Helvetica;
@@ -34,7 +34,10 @@
 	border-color: white;
 }
 .highslide-wrapper, .highslide-outline {
-	background: white;
+	background: #000000;
+
+	/*background: #eaf5fa;
+    box-shadow: 0px 0px 20px 10px #eaf5fa*/
 }
 .glossy-dark {
 	background: #111;
@@ -906,8 +909,16 @@ html>/**/body .highslide-gallery ul img {
 	visibility: visible;
 	border-color: #808080 !important;
 }
+.highslide-dimming {
+	background: #edeef0;
+}
 .highslide-image {
 	border: 2px solid #FFFFFF;
+}
+.highslide-caption {
+	color: #2779aa;
+	background-color: #eaf5fa;
+	padding: 2px;
 }
 .highslide-loading {
 	color: black;
@@ -915,14 +926,25 @@ html>/**/body .highslide-gallery ul img {
 	background-color: white;
 	background-image: url(graphics/loader.white.gif);
 }
-
+.close-simple-white {
+	width: 24px;
+	height: 24px;
+	background: url(graphics/closex.png);
+	display: inline-block;
+	float: right;
+	cursor: pointer;
+	opacity: 0.5;
+	position: relative;
+	top: -2px;
+}
+.close-simple-white:hover {
+	opacity: 1;
+}
 .highslide-controls {
 	position: static !important;
 	margin-bottom: 0;
 	width: 75px !important;
-}
-.highslide-controls .highslide-previous {
-	display: none;
+	/*width: 105px !important;*/
 }
 .highslide-controls .highslide-play {
 	display: none;
@@ -930,10 +952,16 @@ html>/**/body .highslide-gallery ul img {
 .highslide-controls .highslide-pause {
 	display: none;
 }
-.highslide-controls .highslide-next {
+.highslide-controls .highslide-move {
 	display: none;
 }
-.highslide-controls .highslide-move {
+.highslide-controls .highslide-full-expand {
+	display: none !important;
+}
+.highslide-full-expand {
+	display: none !important;
+}
+.highslide-controls .highslide-close {
 	display: none;
 }
 .highslide-gallery ul li {
