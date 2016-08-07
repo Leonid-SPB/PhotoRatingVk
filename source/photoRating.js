@@ -41,7 +41,8 @@ var Settings = {
 				disableSel: false,
 				busy_dfrd : $.Deferred(),
 				abort     : false,
-				thumbsSelected: 0
+				thumbsSelected: 0,
+				revSortOrder: false
 			};
 			data.busy_dfrd.resolve();
 			$this.data('ThumbsViewer', data);
@@ -84,11 +85,15 @@ var Settings = {
 		},
 		
 		//thumbsAr is expected to be non empty array with elements containing .src property
-		addThumbList: function(thumbsAr){
+		//returns Deferred which will be resolved when all thumbs are added to container or job is aborted
+		addThumbList: function(thumbsAr, revSort){
+			var d = $.Deferred();
+
 			function addThumb__(self, thumbsAr, idx){
 				var data   = $(self).data('ThumbsViewer');
 				if(idx >= thumbsAr.length || data.abort){
 					data.busy_dfrd.resolve();
+					d.resolve();
 					return;
 				}
 				
@@ -96,20 +101,29 @@ var Settings = {
 				setTimeout(function(){addThumb__(self, thumbsAr, idx);}, defaults.AddThumbDelay);
 			}
 			
+			//abort prev job in progress
 			var $this = $(this);
 			var data   = $this.data('ThumbsViewer');
 			data.abort = true;
 			
 			if(!thumbsAr.length){
-				return;
+				d.reject();
+				return d.promise();
 			}
-			
+
+			data.revSortOrder = revSort;
+			if(revSort){
+				thumbsAr.reverse();
+			}
+
+			//when prev job aborted, start new job
 			var self = this;
 			$.when( data.busy_dfrd ).done(function(){
 				data.busy_dfrd = $.Deferred();
 				data.abort = false;
 				addThumb__(self, thumbsAr, 0);
 			});
+			return d.promise();
 		},
 		
 		selectAll: function(){
@@ -154,17 +168,17 @@ var Settings = {
 				return;
 			}
 			
-			var thumsSelected = 0;
+			var thumbsSelected = 0;
 			var thumbsTotal = 0;
 			
 			$this.find(".ThumbsViewer-thumb_block").each(function(){
 				++thumbsTotal;
 				if( $(this).hasClass("selected") ){
-					++thumsSelected;
+					++thumbsSelected;
 				}
 			});
 			
-			if(thumsSelected == thumbsTotal){
+			if(thumbsSelected == thumbsTotal){
 				$this.find(".ThumbsViewer-thumb_block").removeClass("selected");
 				data.thumbsSelected = 0;
 			}else{
@@ -173,18 +187,80 @@ var Settings = {
 			}
 		},
 		
+		selectToggleVisible: function(){
+			var $this  = $(this);
+			var data   = $this.data('ThumbsViewer');
+
+			if( data.disableSel ){
+				return;
+			}
+
+			var $thumbs = $this.find(".ThumbsViewer-thumb_block");
+			if(!$thumbs.length){//no thumbs in container
+				return;
+			}
+
+			var $parentDiv = $this.parent().first();
+			var divHeight = $parentDiv.innerHeight();
+			var liHeight = $thumbs.first().outerHeight();
+			var rowsScrolled = Math.round($parentDiv.scrollTop()/liHeight);
+			var rowsOnScreen = Math.ceil(divHeight/liHeight);
+
+			var selFirstIndex = rowsScrolled*defaults.ThumbsInRow;
+			var selLastIndex = Math.min(selFirstIndex + rowsOnScreen*defaults.ThumbsInRow, $thumbs.length);
+			$thumbs = $thumbs.slice(selFirstIndex, selLastIndex);
+
+			var thumbsSelected = 0;
+			var thumbsTotal = 0;
+			$thumbs.each(function(){
+				++thumbsTotal;
+				if( $(this).hasClass("selected") ){
+					++thumbsSelected;
+				}
+			});
+
+			if(thumbsSelected == thumbsTotal){
+				$thumbs.removeClass("selected");
+			}else{
+				$thumbs.addClass("selected");
+			}
+
+			data.thumbsSelected = $this.find(".ThumbsViewer-thumb_block.selected").length;
+		},
+
 		empty: function() {
 			var $this = $(this);
 			var data   = $this.data('ThumbsViewer');
-			data.abort = true;
+			data.abort = true;//abort job in progress(if any)
 			
-			
+			//when job aborted, clean container
 			$.when( data.busy_dfrd ).done(function(){
 				$this.empty();
 				data.thumbsSelected = 0;
 			});
 		},
 		
+		sort: function(revSort) {
+			var $this = $(this);
+			var data   = $this.data('ThumbsViewer');
+
+			//if busy, abort sorting
+			if( data.busy_dfrd.state() != "resolved" ){
+				return;
+			}
+
+			//if sort order changed, resort thumbs
+			if( data.revSortOrder != revSort ){
+				data.revSortOrder = revSort;
+
+				var $thumbs = $this.find(".ThumbsViewer-thumb_block");
+				$thumbs.detach();
+				var thumbsLi = $thumbs.toArray().reverse();
+				for( var i = 0; i < thumbsLi.length; ++i){
+					$this.append(thumbsLi[i]);
+				}
+			}
+		},
 		onSelClick__: function(event, parent){
 			var $this = $(this);
 			var data = $this.data('ThumbsViewer');
@@ -226,6 +302,8 @@ var Settings = {
 			return getSelThumbsData.apply( this );
 		}else if(method == "getSelThumbsNum"){
 			return getSelThumbsNum.apply( this );
+		}else if(method == "addThumbList"){
+			return methods.addThumbList.apply( this, Array.prototype.slice.call(args, 1 ) );
 		}
 		
 		return this.each(function() {
@@ -239,6 +317,21 @@ var Settings = {
 		});
 	};
 })( jQuery, hs );
+
+$.fn.spin = function(opts) {
+	this.each(function() {
+		var $this = $(this),
+			data = $this.data();
+
+		if ( (opts === false) && (data.spinner) ) {
+			data.spinner.stop();
+			delete data.spinner;
+		} else if ((!data.spinner) && (opts !== false)) {
+			data.spinner = new Spinner($.extend({color: $this.css('color')}, opts)).spin(this);
+		}
+	});
+	return this;
+};
 
 function getParameterByName(name){
 	name = name.replace(/[\[]/, "\\\[").replace(/[\]]/, "\\\]");
@@ -276,22 +369,6 @@ function displayWarn(eMsg, noteDivId, hideAfter){
 function showInviteBox(){
 	VK.callMethod("showInviteBox");
 }
-
-$.fn.spin = function(opts) {
-	this.each(function() {
-		var $this = $(this),
-			data = $this.data();
-
-		if (data.spinner) {
-		  data.spinner.stop();
-		  delete data.spinner;
-		}
-		if (opts !== false) {
-		  data.spinner = new Spinner($.extend({color: $this.css('color')}, opts)).spin(this);
-		}
-	});
-	return this;
-};
 
 function showSpinner(){
 	var opts = {
