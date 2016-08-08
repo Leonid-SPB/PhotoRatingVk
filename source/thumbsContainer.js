@@ -44,20 +44,32 @@ requires: jQuery, highslide
 			var onClickOrigUrl = "var myWindow = window.open('" + origUrl + "', 'vk_photo', '" + $data.VkPhotoPopupSettings + "', false); myWindow.focus();";
 			var titleStr = '&#10084; ' + vk_img.likes.count + ', <a title="Оригинал фото" onclick="' + onClickOrigUrl + '">' + origUrl + '</a>';
 			
+			function getSelSizeUrl(vk_img, szLiter) {
+				for (var i = 0; i < vk_img.sizes.length; ++i) {
+					if (vk_img.sizes[i].type == szLiter) {
+						return vk_img.sizes[i].src;
+					}
+				}
+				return vk_img.sizes[1];
+			}
+			
+			var zoomImgSrc = getSelSizeUrl(vk_img, 'r');
 			var aa = $("<a />", 
-				{href: vk_img.photo_807, title: 'Увеличить', 
+				{href: zoomImgSrc, title: 'Увеличить', 
 				 onclick: 'return hs.expand(this, hs.config1)'}
 			).data({title: titleStr, caption: vk_img.text});
 			var zoomIcon = $('<div class="ThumbsViewer_zoom-ico" />').append(aa);
-
+			
+			
+			var imgSrc = getSelSizeUrl(vk_img, 'p');
 			var thumb_img = $("<img />");
 			thumb_img.on('load', function(){
 				thumb_parent.removeClass('loading');
 				thumb_parent.addClass('showphoto');
-				thumb_parent.css('background-image', 'url(' + vk_img.photo_604 + ')');
+				thumb_parent.css('background-image', 'url(' + imgSrc + ')');
 				thumb_img.on('load', null);
 			});
-			thumb_img.attr({src: vk_img.photo_604, title: "Открыть фото"});
+			thumb_img.attr({src: imgSrc, title: "Открыть фото"});
 			
 			thumb_parent.append(zoomIcon);
 			thumb_parent.data('ThumbsViewer', {vk_img: vk_img});

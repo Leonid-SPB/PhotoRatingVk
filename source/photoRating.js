@@ -145,7 +145,7 @@ var RPApi = {
 		Settings.likedThresh = +self.$ratingThreshSpin.spinner("value");
 		showSpinner();
 		
-		VkApiWrapper.queryAllPhotosList({owner_id: Settings.vkUserId, offset: 0, count: 0}).done(function(response){
+		VkApiWrapper.queryAllPhotosList({owner_id: ownerId, offset: 0, count: 0}).done(function(response){
 			self.photosCount = response.count;
 			
 			self.queryRatedPhotos(ownerId).done(function(){
@@ -219,7 +219,7 @@ var RPApi = {
 				ddd.resolve();
 				return;
 			}
-			VkApiWrapper.queryAllPhotosList({owner_id: ownerId, offset: offset, count: Settings.GetPhotosCunksSz, extended: 1}).done(
+			VkApiWrapper.queryAllPhotosList({owner_id: ownerId, offset: offset, count: Settings.GetPhotosCunksSz, extended: 1, photo_sizes: 1}).done(
 				function(photos) {
 					var ratedPhotos = self.filterPhotos(photos.items, Settings.likedThresh);
 					self.ratedPhotos = self.ratedPhotos.concat(ratedPhotos);
