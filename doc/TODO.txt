@@ -1,10 +1,11 @@
-) gallery support
+) refactoring/cleanup
+) thumbnail caption/title (album name to caption/title?)
 ) smart gid/uid search
 ) new VK api, new Jquery
 ) share link button
 ) better loadding gif
 
-
+x) hs gallery support
 x) increse size of preview window
 x) replace zoom in icon with flat design icon
 x) add captions (likes, link to original image)
@@ -12,3 +13,5 @@ x) fade everything when showing foto
 x) minimal canvas size for photo
 
 ?) click anywhere to close preview
+
+

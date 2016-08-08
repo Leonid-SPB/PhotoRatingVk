@@ -18,12 +18,12 @@ requires: jQuery, highslide
 
 			var data = {
 				disableSel    : false,
-				revSortOrder  : false
+				revSortOrder  : false,
 
 				//private
 				busy_dfrd__   : $.Deferred(),
 				abortTask__   : false,
-				thumbsSelCnt__: 0,
+				thumbsSelCnt__: 0
 			};
 			data.busy_dfrd__.resolve();
 			$.extend(data, defaults, opts);
@@ -42,9 +42,12 @@ requires: jQuery, highslide
 		
 			var origUrl = "//vk.com/photo" + vk_img.owner_id + "_" + vk_img.pid;
 			var onClickOrigUrl = "var myWindow = window.open('" + origUrl + "', 'vk_photo', '" + $data.VkPhotoPopupSettings + "', false); myWindow.focus();";
-			var captionStr = '&#10084; ' + vk_img.likes.count + ', <a title="Оригинал фото" onclick="' + onClickOrigUrl + '">' + origUrl + '</a>';
+			var titleStr = '&#10084; ' + vk_img.likes.count + ', <a title="Оригинал фото" onclick="' + onClickOrigUrl + '">' + origUrl + '</a>';
 			
-			var aa = $("<a />", {href: vk_img.src_big, title: 'Увеличить', onclick: 'return hs.expand(this, hs.config1)'}).data({caption: captionStr});
+			var aa = $("<a />", 
+				{href: vk_img.src_big, title: 'Увеличить', 
+				 onclick: 'return hs.expand(this, hs.config1)'}
+			).data({title: titleStr, caption: vk_img.text});
 			var zoomIcon = $('<div class="ThumbsViewer_zoom-ico" />').append(aa);
 
 			var thumb_img = $("<img />");
@@ -283,6 +286,7 @@ requires: jQuery, highslide
 		///addThumb() calls this function modify $thumb object before insertion to the container
 		onAddThumb: function($thumb){
 			//!!!
+			var vk_img = $thumb.data('ThumbsViewer').vk_img;
 			var likesbox = '<div class="ui-state-default ThumbsViewer_likesBox ui-corner-br">&#10084; ' + vk_img.likes.count + '</div>';
 			$thumb.append($(likesbox));
 		},

@@ -17,8 +17,10 @@ hs.height = 600;
 hs.restoreCursor = null;
 hs.allowMultipleInstances = false;
 hs.closeButtonHtml = '<div class="close-simple-white" onclick="return hs.close(this)" title="Закрыть"></div>';
-hs.captionEval = '$(this.a).data().caption + hs.closeButtonHtml';
-hs.captionOverlay.position = 'above';
+hs.captionEval = '$(this.a).data().caption';
+hs.headingEval = '$(this.a).data().title + hs.closeButtonHtml';
+hs.captionOverlay.position = 'below';
+hs.headingOverlay.position = 'above';
 
 // Add the slideshow controller
 hs.addSlideshow({

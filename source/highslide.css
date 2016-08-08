@@ -915,9 +915,13 @@ html>/**/body .highslide-gallery ul img {
 .highslide-image {
 	border: 2px solid #FFFFFF;
 }
-.highslide-caption {
+.highslide-heading {
 	color: #2779aa;
 	background-color: #eaf5fa;
+	padding: 2px;
+	margin: 0px;
+}
+.highslide-caption {
 	padding: 2px;
 }
 .highslide-loading {
