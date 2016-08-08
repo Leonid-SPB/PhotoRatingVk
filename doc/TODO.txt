@@ -4,6 +4,7 @@
 ) new VK api, new Jquery
 ) share link button
 ) better loadding gif
+)timeout for VK api calls
 
 x) hs gallery support
 x) increse size of preview window
