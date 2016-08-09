@@ -44,16 +44,19 @@ requires: jQuery, highslide
 			var onClickOrigUrl = "var myWindow = window.open('" + origUrl + "', 'vk_photo', '" + $data.VkPhotoPopupSettings + "', false); myWindow.focus();";
 			var titleStr = '&#10084; ' + vk_img.likes.count + ', <a title="Оригинал фото" onclick="' + onClickOrigUrl + '">' + origUrl + '</a>';
 			
-			function getSelSizeUrl(vk_img, szLiter) {
+			function getSelSizeUrl(vk_img, szLiterPref, szLiterAlt) {
+				var src_alt = vk_img.sizes[0].src;
 				for (var i = 0; i < vk_img.sizes.length; ++i) {
-					if (vk_img.sizes[i].type == szLiter) {
+					if (vk_img.sizes[i].type == szLiterPref) {
 						return vk_img.sizes[i].src;
+					} else if (vk_img.sizes[i].type == szLiterAlt) {
+						src_alt = vk_img.sizes[i].src;
 					}
 				}
-				return vk_img.sizes[1];
+				return src_alt;
 			}
 			
-			var zoomImgSrc = getSelSizeUrl(vk_img, 'r');
+			var zoomImgSrc = getSelSizeUrl(vk_img, 'y', 'x');
 			var aa = $("<a />", 
 				{href: zoomImgSrc, title: 'Увеличить', 
 				 onclick: 'return hs.expand(this, hs.config1)'}
@@ -61,7 +64,7 @@ requires: jQuery, highslide
 			var zoomIcon = $('<div class="ThumbsViewer_zoom-ico" />').append(aa);
 			
 			
-			var imgSrc = getSelSizeUrl(vk_img, 'p');
+			var imgSrc = getSelSizeUrl(vk_img, 'p', 'm');
 			var thumb_img = $("<img />");
 			thumb_img.on('load', function(){
 				thumb_parent.removeClass('loading');
@@ -264,6 +267,8 @@ requires: jQuery, highslide
 			var $this = $(this);
 			var $data   = $this.data('ThumbsViewer');
 			$data.abortTask__ = true;//abort job in progress(if any)
+			
+			hs.close();
 			
 			//when job aborted, clean container
 			$.when( $data.busy_dfrd__ ).done(function(){
