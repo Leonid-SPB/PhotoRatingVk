@@ -1,11 +1,14 @@
-) refactoring/cleanup
-) thumbnail caption/title (album name to caption/title?)
+) new Jquery
+) album name to title, photo number?
+) HR to caption?
 ) smart gid/uid search
-) new VK api, new Jquery
 ) share link button
-) better loadding gif
-)timeout for VK api calls
+) timeout for VK api calls
 
+) refactoring/cleanup
+) better loadding gif
+
+x) new VK api
 x) hs gallery support
 x) increse size of preview window
 x) replace zoom in icon with flat design icon
@@ -14,5 +17,5 @@ x) fade everything when showing foto
 x) minimal canvas size for photo
 
 ?) click anywhere to close preview
-
+) filter by album?
 
