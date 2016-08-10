@@ -923,6 +923,7 @@ html>/**/body .highslide-gallery ul img {
 }
 .highslide-caption {
 	padding: 2px;
+	border-top: 1px solid #ccc;
 }
 .highslide-loading {
 	color: black;

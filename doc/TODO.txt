@@ -1,6 +1,6 @@
 ) new Jquery
-) album name to title, photo number?
-) HR to caption?
+) click on image to open gallery, click on "zoom" icon to open original photo
+) caption: album name and link to original. title: likes, photo xx of yy?
 ) smart gid/uid search
 ) share link button
 ) timeout for VK api calls
