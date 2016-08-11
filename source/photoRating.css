@@ -122,6 +122,10 @@ a:hover {
 	top: 0px;
 }
 
+.ThumbsViewer-hslink {
+	/*marker for links to images for highslide gallery*/
+}
+
 .ThumbsViewer_zoom-ico {
 	background: url(graphics/zoom-in-icon.png) no-repeat;
 	position: absolute;

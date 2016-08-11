@@ -57,10 +57,11 @@ requires: jQuery, highslide
 			}
 			
 			var zoomImgSrc = getSelSizeUrl(vk_img, 'y', 'x');
-			var aa = $("<a />", 
-				{href: zoomImgSrc, title: 'Увеличить', 
-				 onclick: 'return hs.expand(this, hs.config1)'}
-			).data({title: titleStr, caption: vk_img.text});
+			var aa = $("<a />", {
+				class: 'ThumbsViewer-hslink',
+				href: zoomImgSrc, title: 'Увеличить', 
+				onclick: 'return hs.expand(this, hs.config1)'
+			}).data({title: titleStr, caption: vk_img.text});
 			var zoomIcon = $('<div class="ThumbsViewer_zoom-ico" />').append(aa);
 			
 			

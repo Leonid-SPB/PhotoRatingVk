@@ -17,8 +17,8 @@ hs.height = 600;
 hs.restoreCursor = null;
 hs.allowMultipleInstances = false;
 hs.closeButtonHtml = '<div class="close-simple-white" onclick="return hs.close(this)" title="Закрыть"></div>';
-hs.captionEval = '$(this.a).data().caption';
-hs.headingEval = '$(this.a).data().title + hs.closeButtonHtml';
+hs.captionEval = 'hs.makeCaption.apply(this)';
+hs.headingEval = 'hs.makeHeader.apply(this)';
 hs.captionOverlay.position = 'below';
 hs.headingOverlay.position = 'above';
 
@@ -69,4 +69,18 @@ hs.lang = {
 hs.config1 = {
 	slideshowGroup: 'group1',
 	transitions: ['expand', 'crossfade']
+};
+
+//require Jquery ($)
+hs.makeCaption = function() {
+	return $(this.a).data().caption;
+};
+
+//require Jquery ($)
+hs.makeHeader = function() {
+	var allImagesAA = $(".ThumbsViewer-hslink");
+	var totalImg = allImagesAA.length;
+	var index = allImagesAA.index(this.a) + 1;
+	
+	return $(this.a).data().title + ", Фото " + index + " из " + totalImg + " " + hs.closeButtonHtml;
 };
