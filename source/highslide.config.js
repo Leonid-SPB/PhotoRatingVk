@@ -21,6 +21,7 @@ hs.captionEval = 'hs.makeCaption.apply(this)';
 hs.headingEval = 'hs.makeHeader.apply(this)';
 hs.captionOverlay.position = 'below';
 hs.headingOverlay.position = 'above';
+hs.dragByHeading = false;
 
 // Add the slideshow controller
 hs.addSlideshow({
@@ -79,8 +80,10 @@ hs.makeCaption = function() {
 //require Jquery ($)
 hs.makeHeader = function() {
 	var allImagesAA = $(".ThumbsViewer-hslink");
-	var totalImg = allImagesAA.length;
+	var totalImgs = allImagesAA.length;
 	var index = allImagesAA.index(this.a) + 1;
+	var title = $(this.a).data().title.replace("%1", index);
+	title = title.replace("%2", totalImgs);
 	
-	return $(this.a).data().title + ", Фото " + index + " из " + totalImg + " " + hs.closeButtonHtml;
+	return title + hs.closeButtonHtml;
 };

@@ -39,11 +39,7 @@ requires: jQuery, highslide
 			var $this = $(this);
 			var $data = $(this).data('ThumbsViewer');
 			var thumb_parent = $("<div class='ThumbsViewer-thumb_block loading' />");
-		
-			var origUrl = "//vk.com/photo" + vk_img.owner_id + "_" + vk_img.id;
-			var onClickOrigUrl = "var myWindow = window.open('" + origUrl + "', 'vk_photo', '" + $data.VkPhotoPopupSettings + "', false); myWindow.focus();";
-			var titleStr = '&#10084; ' + vk_img.likes.count + ', <a title="Оригинал фото" onclick="' + onClickOrigUrl + '">' + origUrl + '</a>';
-			
+
 			function getSelSizeUrl(vk_img, szLiterPref, szLiterAlt) {
 				var src_alt = vk_img.sizes[0].src;
 				for (var i = 0; i < vk_img.sizes.length; ++i) {
@@ -55,16 +51,17 @@ requires: jQuery, highslide
 				}
 				return src_alt;
 			}
-			
+
+			var titleStr = thC.makeTitle.call(this, vk_img);
+			var captionStr = thC.makeCaption.call(this, vk_img);
 			var zoomImgSrc = getSelSizeUrl(vk_img, 'y', 'x');
 			var aa = $("<a />", {
 				class: 'ThumbsViewer-hslink',
 				href: zoomImgSrc, title: 'Увеличить', 
 				onclick: 'return hs.expand(this, hs.config1)'
-			}).data({title: titleStr, caption: vk_img.text});
+			}).data({title: titleStr, caption: captionStr});
 			var zoomIcon = $('<div class="ThumbsViewer_zoom-ico" />').append(aa);
-			
-			
+
 			var imgSrc = getSelSizeUrl(vk_img, 'p', 'm');
 			var thumb_img = $("<img />");
 			thumb_img.on('load', function(){
@@ -74,10 +71,10 @@ requires: jQuery, highslide
 				thumb_img.on('load', null);
 			});
 			thumb_img.attr({src: imgSrc, title: "Открыть фото"});
-			
+
 			thumb_parent.append(zoomIcon);
 			thumb_parent.data('ThumbsViewer', {vk_img: vk_img});
-			thC.onAddThumb(thumb_parent);
+			thC.onAddThumb.call(this, thumb_parent);
 			thumb_parent.appendTo($this);
 		},
 		
@@ -299,6 +296,30 @@ requires: jQuery, highslide
 					$this.append(thumbsLi[i]);
 				}
 			}
+		},
+		
+		makeTitle: function(vk_img) {
+			return 'Фото %1/%2:&nbsp; &#10084; ' + vk_img.likes.count;
+		},
+		
+		makeCaption: function(vk_img) {
+			var $this = $(this);
+			var $data   = $this.data('ThumbsViewer');
+			
+			var album = "Undefined";
+			var origUrl = "//vk.com/photo" + vk_img.owner_id + "_" + vk_img.id;
+			var onClickOrigUrl = "var myWindow = window.open('" + origUrl + "', 'vk_photo', '" + $data.VkPhotoPopupSettings + "', false); myWindow.focus();";
+			var caption = '\
+				<div>\
+					<div class="highslide-caption-divinfo" style="text-align: left"><b>Альбом</b>:<i> %1</i></div><div class="highslide-caption-divinfo" style="text-align: right"><a onclick="%2">Оригинал фото</a></div>\
+				</div>\
+				<div class="highslide-caption-descr">%3</div>';
+			
+			caption = caption.replace("%1", album);
+			caption = caption.replace("%2", onClickOrigUrl);
+			caption = caption.replace("%3", vk_img.text);
+			
+			return caption;
 		},
 		
 		///addThumb() calls this function modify $thumb object before insertion to the container

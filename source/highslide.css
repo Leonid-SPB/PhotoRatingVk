@@ -3,6 +3,7 @@
 * @version: 5.0.0
 */
 .highslide-container div {
+	direction: ltr;
 	font-family: Verdana, Helvetica;
 	font-size: 10pt;
 }
@@ -920,11 +921,23 @@ html>/**/body .highslide-gallery ul img {
 	background-color: #eaf5fa;
 	padding: 2px;
 	margin: 0px;
+	font-weight: bold;
 }
 .highslide-caption {
 	padding: 2px;
 	border-top: 1px solid #ccc;
 }
+.highslide-caption-divinfo {
+	text-overflow: ellipsis;
+	display: inline-block;
+	vertical-align: top;
+	width: 50%;
+}
+.highslide-caption-descr {
+	margin-top: 5px;
+	font-style: italic;
+}
+
 .highslide-loading {
 	color: black;
 	border: 1px solid black;

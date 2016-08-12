@@ -1,13 +1,14 @@
+pending:
 ) new Jquery
-) click on image to open gallery, click on "zoom" icon to open original photo
 ) caption: album name and link to original. title: likes, photo xx of yy?
 ) smart gid/uid search
 ) share link button
 ) timeout for VK api calls
 
 ) refactoring/cleanup
-) better loadding gif
+) style tuning: better loadding gif, fonts, etc...
 
+done:
 x) new VK api
 x) hs gallery support
 x) increse size of preview window
@@ -16,6 +17,7 @@ x) add captions (likes, link to original image)
 x) fade everything when showing foto
 x) minimal canvas size for photo
 
-?) click anywhere to close preview
+no go:
+) click anywhere to close preview
 ) filter by album?
-
+) click on image to open gallery, click on "zoom" icon to open original photo
