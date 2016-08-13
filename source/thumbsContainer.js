@@ -24,6 +24,7 @@ requires: jQuery, highslide
 				//private
 				busy_dfrd__   : $.Deferred(),
 				abortTask__   : false,
+				thumbsQueue   : [],
 				thumbsSelCnt__: 0
 			};
 			data.busy_dfrd__.resolve();
@@ -36,7 +37,7 @@ requires: jQuery, highslide
 		},
 		
 		///expects object VK API image object
-		addThumb: function(vk_img) {
+		createThumb: function(vk_img) {
 			var $this = $(this);
 			var $data = $(this).data('ThumbsViewer');
 			var thumb_parent = $("<div class='ThumbsViewer-thumb_block loading' />");
@@ -75,7 +76,7 @@ requires: jQuery, highslide
 
 			thumb_parent.append(zoomIcon);
 			thumb_parent.data('ThumbsViewer', {vk_img: vk_img});
-			thC.onAddThumb.call(this, thumb_parent);
+			thC.oncreateThumb.call(this, thumb_parent);
 			thumb_parent.appendTo($this);
 		},
 		
@@ -90,48 +91,44 @@ requires: jQuery, highslide
 		
 		///thumbsAr is expected to be non empty array with elements containing .src property
 		///returns Deferred which will be resolved when all thumbs are added to container or job is aborted
-		addThumbList: function(thumbsAr, revSort, albumMap){
+		addThumbList: function(thumbsAr){
+			var self = this;
 			var $this = $(this);
 			var $data  = $this.data('ThumbsViewer');
 			var d = $.Deferred();
 
-			function addThumb__(self, thumbsAr, idx){
-				var $data   = $(self).data('ThumbsViewer');
-				if(idx >= thumbsAr.length || $data.abortTask__){
+			
+			function addThumb__(queue){
+				if(!queue.length || $data.abortTask__){
 					$data.busy_dfrd__.resolve();
 					d.resolve();
 					return;
 				}
 				
-				thC.addThumb.call(self, thumbsAr[idx++]);
-				setTimeout(function(){addThumb__(self, thumbsAr, idx);}, $data.AddThumbDelay);
+				thC.createThumb.call(self, queue.shift());
+				setTimeout(function(){addThumb__(queue);}, $data.AddThumbDelay);
 			}
 			
 			//abort prev job in progress
 			$data.abortTask__ = true;
-			
-			if(!thumbsAr.length){
-				d.reject();
-				return d.promise();
-			}
-			
-			if (albumMap) {
-				$data.albumMap = albumMap;
-			}
-
-			$data.revSortOrder = revSort;
-			if (revSort){
-				thumbsAr.reverse();
-			}
 
 			//when prev job aborted, start new job
-			var self = this;
 			$.when( $data.busy_dfrd__ ).done(function(){
+				$data.thumbsQueue = $data.thumbsQueue.concat(thumbsAr);
 				$data.busy_dfrd__ = $.Deferred();
 				$data.abortTask__ = false;
-				addThumb__(self, thumbsAr, 0);
+				addThumb__($data.thumbsQueue);
 			});
+			
 			return d.promise();
+		},
+		
+		///update album map: id -> description with new records
+		updateAlbumMap: function(albumMap) {
+			var $this = $(this);
+			var $data = $this.data('ThumbsViewer');
+			
+			$.extend($data.albumMap, albumMap);
 		},
 		
 		///select all thumbnails in container
@@ -273,11 +270,18 @@ requires: jQuery, highslide
 			
 			hs.close();
 			
+			var d = $.Deferred();
+			
 			//when job aborted, clean container
 			$.when( $data.busy_dfrd__ ).done(function(){
 				$this.empty();
 				$data.thumbsSelCnt__ = 0;
+				$data.albumMap       = {};
+				$data.thumbsQueue    = [];
+				d.resolve();
 			});
+			
+			return d.promise();
 		},
 		
 		///reorder thumbnails in container (straight/reverse)
@@ -285,9 +289,9 @@ requires: jQuery, highslide
 			var $this = $(this);
 			var $data   = $this.data('ThumbsViewer');
 
-			//if busy, abort sorting
+			//if busy, reverse image queue
 			if( $data.busy_dfrd__.state() != "resolved" ){
-				return;
+				console.log("Thumbs Container: reverse while adding new images!");
 			}
 
 			//if sort order changed, resort thumbs
@@ -331,8 +335,8 @@ requires: jQuery, highslide
 			return caption;
 		},
 		
-		///addThumb() calls this function modify $thumb object before insertion to the container
-		onAddThumb: function($thumb){
+		///createThumb() calls this function modify $thumb object before insertion to the container
+		oncreateThumb: function($thumb){
 			//!!!
 			var vk_img = $thumb.data('ThumbsViewer').vk_img;
 			var likesbox = '<div class="ui-state-default ThumbsViewer_likesBox ui-corner-br">&#10084; ' + vk_img.likes.count + '</div>';

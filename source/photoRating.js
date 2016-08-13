@@ -165,7 +165,8 @@ var RPApi = {
 				
 				self.queryAlbumInfo(ownerId, self.ratedPhotos).done(function(){
 					hideSpinner();
-					$("#thumbs_container").ThumbsViewer("addThumbList", self.ratedPhotos, false, self.albumMap);
+					$("#thumbs_container").ThumbsViewer("updateAlbumMap", self.albumMap);
+					$("#thumbs_container").ThumbsViewer("addThumbList", self.ratedPhotos);
 					self.disableControls(0);
 					
 					if( self.ratedPhotos.length > 10 ){
@@ -230,7 +231,7 @@ var RPApi = {
 				ddd.resolve();
 				return;
 			}
-			VkApiWrapper.queryAllPhotosList({owner_id: ownerId, offset: offset, count: Settings.GetPhotosCunksSz, extended: 1, photo_sizes: 1}).done(
+			VkApiWrapper.queryAllPhotosList({owner_id: ownerId, offset: offset, count: Settings.GetPhotosCunksSz, extended: 1, photo_sizes: 1, no_service_albums: 0}).done(
 				function(photos) {
 					var ratedPhotos = self.filterPhotos(photos.items, Settings.likedThresh);
 					self.ratedPhotos = self.ratedPhotos.concat(ratedPhotos);
@@ -245,7 +246,7 @@ var RPApi = {
 		
 		getNextChunk__(0);
 		
-		return ddd;
+		return ddd.promise();
 	},
 	
 	queryAlbumInfo: function(ownerId, ratedPhotos) {
@@ -256,14 +257,8 @@ var RPApi = {
 			self.albumMap[ratedPhotos[i].album_id] = "";
 		}
 		
-		var albumListStr = "";
-		var keys = Object.keys(self.albumMap);
-		for (var i = 0; i < keys.length-1; ++i) {
-			albumListStr += keys[i] + ",";
-		}
-		albumListStr += albumListStr + keys[keys.length-1];
-		
 		var ddd = $.Deferred();
+		var albumListStr = Object.keys(self.albumMap).join();
 		VkApiWrapper.queryAlbumsList({owner_id: ownerId, album_ids: albumListStr}).done(function(response){
 			for (var i = 0; i < response.count; ++i) {
 				self.albumMap[response.items[i].id] = response.items[i].title;
@@ -274,7 +269,7 @@ var RPApi = {
 			ddd.reject();
 		});
 		
-		return ddd;
+		return ddd.promise();
 	}
 	
 
