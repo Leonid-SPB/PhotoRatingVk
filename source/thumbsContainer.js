@@ -19,6 +19,7 @@ requires: jQuery, highslide
 			var data = {
 				disableSel    : false,
 				revSortOrder  : false,
+				albumMap      : {},
 
 				//private
 				busy_dfrd__   : $.Deferred(),
@@ -89,7 +90,7 @@ requires: jQuery, highslide
 		
 		///thumbsAr is expected to be non empty array with elements containing .src property
 		///returns Deferred which will be resolved when all thumbs are added to container or job is aborted
-		addThumbList: function(thumbsAr, revSort){
+		addThumbList: function(thumbsAr, revSort, albumMap){
 			var $this = $(this);
 			var $data  = $this.data('ThumbsViewer');
 			var d = $.Deferred();
@@ -113,9 +114,13 @@ requires: jQuery, highslide
 				d.reject();
 				return d.promise();
 			}
+			
+			if (albumMap) {
+				$data.albumMap = albumMap;
+			}
 
 			$data.revSortOrder = revSort;
-			if(revSort){
+			if (revSort){
 				thumbsAr.reverse();
 			}
 
@@ -306,7 +311,11 @@ requires: jQuery, highslide
 			var $this = $(this);
 			var $data   = $this.data('ThumbsViewer');
 			
-			var album = "Undefined";
+			var album = "";
+			if (vk_img.album_id in $data.albumMap) {
+				album = $data.albumMap[vk_img.album_id];
+			}
+			
 			var origUrl = "//vk.com/photo" + vk_img.owner_id + "_" + vk_img.id;
 			var onClickOrigUrl = "var myWindow = window.open('" + origUrl + "', 'vk_photo', '" + $data.VkPhotoPopupSettings + "', false); myWindow.focus();";
 			var caption = '\

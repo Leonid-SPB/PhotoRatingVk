@@ -1,6 +1,6 @@
 pending:
 ) new Jquery
-) caption: album name and link to original. title: likes, photo xx of yy?
+
 ) smart gid/uid search
 ) share link button
 ) timeout for VK api calls
@@ -9,6 +9,7 @@ pending:
 ) style tuning: better loadding gif, fonts, etc...
 
 done:
+x) caption: album name and link to original. title: likes, photo xx of yy?
 x) new VK api
 x) hs gallery support
 x) increse size of preview window

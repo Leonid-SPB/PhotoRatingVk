@@ -924,6 +924,8 @@ html>/**/body .highslide-gallery ul img {
 	font-weight: bold;
 }
 .highslide-caption {
+	margin-top: 3px;
+	margin-bottom: 3px;
 	padding: 2px;
 	border-top: 1px solid #ccc;
 }

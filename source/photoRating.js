@@ -41,6 +41,7 @@ var RPApi = {
 	$ratingThreshSpin: null,
 	
 	ratedPhotos      : [],
+	albumMap         : {},
 	photosCount      : 0,
 	
 	init: function(){
@@ -155,15 +156,25 @@ var RPApi = {
 				}
 				self.$chosenPhotosSpan.text(self.ratedPhotos.length);
 				
-				hideSpinner();
-				$("#thumbs_container").ThumbsViewer("addThumbList", self.ratedPhotos);
-				self.disableControls(0);
-				
-				if( self.ratedPhotos.length > 10 ){
-					VkApiWrapper.rateRequest(Settings.RateRequestDelay);
-				}else if ( !self.ratedPhotos.length ){ //no photos found
+				if ( !self.ratedPhotos.length ){ //no photos found
+					hideSpinner();
 					displayError("Не удалось составить рейтинг! Не найдено фотографий, с рейтингом выше " + Settings.likedThresh, "globalErrorBox", Settings.ErrorHideAfter);
+					self.disableControls(0);
+					return;
 				}
+				
+				self.queryAlbumInfo(ownerId, self.ratedPhotos).done(function(){
+					hideSpinner();
+					$("#thumbs_container").ThumbsViewer("addThumbList", self.ratedPhotos, false, self.albumMap);
+					self.disableControls(0);
+					
+					if( self.ratedPhotos.length > 10 ){
+						VkApiWrapper.rateRequest(Settings.RateRequestDelay);
+					}
+				}).fail(function(){
+					self.disableControls(0);
+					hideSpinner();
+				});
 			}).fail(function(){
 				self.disableControls(0);
 				hideSpinner();
@@ -233,6 +244,35 @@ var RPApi = {
 		}
 		
 		getNextChunk__(0);
+		
+		return ddd;
+	},
+	
+	queryAlbumInfo: function(ownerId, ratedPhotos) {
+		var self = this;
+		
+		self.albumMap = {};
+		for (var i = 0; i < ratedPhotos.length; ++i) {
+			self.albumMap[ratedPhotos[i].album_id] = "";
+		}
+		
+		var albumListStr = "";
+		var keys = Object.keys(self.albumMap);
+		for (var i = 0; i < keys.length-1; ++i) {
+			albumListStr += keys[i] + ",";
+		}
+		albumListStr += albumListStr + keys[keys.length-1];
+		
+		var ddd = $.Deferred();
+		VkApiWrapper.queryAlbumsList({owner_id: ownerId, album_ids: albumListStr}).done(function(response){
+			for (var i = 0; i < response.count; ++i) {
+				self.albumMap[response.items[i].id] = response.items[i].title;
+			}
+			
+			ddd.resolve();
+		}).fail(function(){
+			ddd.reject();
+		});
 		
 		return ddd;
 	}
