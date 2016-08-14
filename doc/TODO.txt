@@ -3,13 +3,14 @@ pending:
 ) improve gallery support while thumbs are loadding
 ) smart gid/uid search
 ) share link button
-) timeout for VK api calls
+
 ) new Jquery
 
 ) refactoring/cleanup
 ) style tuning: better loadding gif, fonts, etc...
 
 done:
+x) timeout-retry for VK api calls
 x) caption: album name and link to original. title: likes, photo xx of yy?
 x) new VK api
 x) hs gallery support

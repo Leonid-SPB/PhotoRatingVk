@@ -8,12 +8,17 @@ var VkApiWrapper = {
 	//allowed: 3 requests in 1000 ms
 	apiMaxCallsCount  : 3,
 	apiMaxCallsPeriod : 1000,
+	apiCallTimeout    : 2000,
+	apiCallMaxRetries : 4,
+	apiTmoutMultiplier: 2.0,
 
 	rateLimiter       : null,
 
-	init              : function(apiMaxCallsCount, apiMaxCallsPeriod){
+	init              : function(apiMaxCallsCount, apiMaxCallsPeriod, apiCallTimeout, apiCallMaxRetries){
 		this.apiMaxCallsCount = apiMaxCallsCount;
 		this.apiMaxCallsPeriod = apiMaxCallsPeriod;
+		this.apiCallTimeout = apiCallTimeout;
+		this.apiCallMaxRetries = apiCallMaxRetries;
 		this.rateLimiter = new RateLimit(this.apiMaxCallsCount, this.apiMaxCallsPeriod, false);
 	},
 
@@ -25,18 +30,45 @@ var VkApiWrapper = {
 	//calls VK API method with specified parameters
 	//returns Deferred.promise()
 	callVkApi: function(vkApiMethod, methodParams) {
+		var self = this;
 		var d = $.Deferred();
-
-		this.rateLimiter.schedule(function(){
-			VK.api(vkApiMethod, methodParams, function(data) {
-				if("response" in data){
-					d.resolve(data.response);
-				}else{
-					console.log(data.error.error_msg);
-					d.reject(data.error);
-				}
+		var retries = self.apiCallMaxRetries;
+		var timeout = self.apiCallTimeout;
+		
+		function scheduleVkApiMethod() {
+			self.rateLimiter.schedule(function() {
+				setTimeout(function() {
+					if (d.state() == "pending") {
+						if (retries-- > 0) {
+							console.log("VkApiWrapper: VK.api call timeout, rescheduling request");
+							timeout *= self.apiTmoutMultiplier;
+							scheduleVkApiMethod();
+						} else {
+							console.log("VkApiWrapper: VK.api call timeout, all retries failed");
+							d.reject();
+						}
+					}
+					
+					//no timeout, api call already finished
+				}, timeout);
+				
+				VK.api(vkApiMethod, methodParams, function(data) {
+					//don't resolve/reject again on duplicate request
+					if (d.state() != "pending") {
+						return;
+					}
+					
+					if ("response" in data) {
+						d.resolve(data.response);
+					} else {
+						console.log(data.error.error_msg);
+						d.reject(data.error);
+					}
+				});
 			});
-		});
+		}
+		
+		scheduleVkApiMethod();
 
 		return d.promise();
 	},

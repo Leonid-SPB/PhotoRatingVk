@@ -8,6 +8,8 @@ var Settings = {
 	VkAppLocation       : "//vk.com/app3337781",
 	VkApiMaxCallsCount  : 3,
 	VkApiMaxCallsPeriod : 1000,
+	VkApiCallTimeout    : 2000,
+	VkApiCallMaxRetries : 4,
 	GetPhotosCunksSz: 100,
 	ErrorHideAfter  : 3000,
 	MaxRatedPhotos  : 10000,
@@ -298,7 +300,8 @@ $(function(){
 	VK.init(
 		function() {
 			// API initialization succeeded
-			VkApiWrapper.init(Settings.VkApiMaxCallsCount, Settings.VkApiMaxCallsPeriod);
+			VkApiWrapper.init(Settings.VkApiMaxCallsCount, Settings.VkApiMaxCallsPeriod,
+				Settings.VkApiCallTimeout, Settings.VkApiCallMaxRetries);
 			
 			//preloader AD
 			/*if (typeof VKAdman !== 'undefined') {
