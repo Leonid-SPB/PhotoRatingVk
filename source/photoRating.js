@@ -10,9 +10,10 @@ var Settings = {
 	VkApiMaxCallsPeriod : 1000,
 	VkApiCallTimeout    : 2000,
 	VkApiCallMaxRetries : 4,
-	GetPhotosCunksSz: 100,
+	GetPhotosChunksSz: 100,
 	ErrorHideAfter  : 3000,
-	MaxRatedPhotos  : 10000,
+	MaxRatedPhotos  : 1000,
+	MaxTotalPhotos  : 1000000,
 	RateRequestDelay: 3000,
 	BlinkDelay      : 500,
 	BlinkCount      : 12,
@@ -45,6 +46,8 @@ var RPApi = {
 	ratedPhotos      : [],
 	albumMap         : {},
 	photosCount      : 0,
+	photosLoadedCnt  : 0,
+	photosFilteredCnt: 0,
 	
 	init: function(){
 		var self = this;
@@ -141,17 +144,44 @@ var RPApi = {
 		var self = this;
 		var ownerId = +this.vkIdEdit.value;
 		
-		//disable controls
 		self.disableControls(1);
 		$("#thumbs_container").ThumbsViewer("empty");
+		self.$totalPhotosSpan.text("0");
 		self.$chosenPhotosSpan.text("0");
+		self.$ratedPhotosSpan.text("0");
+		self.ratedPhotos = [];
+		self.photosLoadedCnt = 0;
+		self.photosFilteredCnt = 0;
 		Settings.likedThresh = +self.$ratingThreshSpin.spinner("value");
 		showSpinner();
 		
-		VkApiWrapper.queryAllPhotosList({owner_id: ownerId, offset: 0, count: 0}).done(function(response){
-			self.photosCount = response.count;
+		function onFail() {
+			self.disableControls(0);
+			hideSpinner();
+		}
+		
+		function onProgress(p, q) {
+			self.updateProgress(p, q);
+		}
+		
+		function pushPhotos(photos) {
+			self.ratedPhotos = self.ratedPhotos.concat(photos);
+		}
+		
+		self.getTotalPhotosCount().done(function(count) {
+			self.photosCount = count;
+			self.$totalPhotosSpan.text(count);
+			var d1 = self.queryAllPhotos(ownerId, 0, Settings.MaxTotalPhotos);
+			var d2 = self.queryAlbumPhotos(ownerId, 'wall', 0, Settings.MaxTotalPhotos);
+			var d3 = self.queryAlbumPhotos(ownerId, 'saved', 0, Settings.MaxTotalPhotos);
+			var d4 = self.queryAlbumPhotos(ownerId, 'profile', 0, Settings.MaxTotalPhotos);
 			
-			self.queryRatedPhotos(ownerId).done(function(){
+			d1.progress(onProgress).fail(onFail).done(pushPhotos);
+			d2.progress(onProgress).fail(onFail).done(pushPhotos);
+			d3.progress(onProgress).fail(onFail).done(pushPhotos);
+			d4.progress(onProgress).fail(onFail).done(pushPhotos);
+			
+			$.when(d1, d2, d3, d4).done(function() {
 				self.ratedPhotos = self.sortPhotosByRating(self.ratedPhotos);
 				if( self.ratedPhotos.length > Settings.MaxRatedPhotos ){
 					self.ratedPhotos = self.ratedPhotos.slice(0, Settings.MaxRatedPhotos);
@@ -165,7 +195,7 @@ var RPApi = {
 					return;
 				}
 				
-				self.queryAlbumInfo(ownerId, self.ratedPhotos).done(function(){
+				self.queryAlbumsInfo(ownerId, self.ratedPhotos).done(function() {
 					hideSpinner();
 					$("#thumbs_container").ThumbsViewer("updateAlbumMap", self.albumMap);
 					$("#thumbs_container").ThumbsViewer("addThumbList", self.ratedPhotos);
@@ -174,35 +204,31 @@ var RPApi = {
 					if( self.ratedPhotos.length > 10 ){
 						VkApiWrapper.rateRequest(Settings.RateRequestDelay);
 					}
-				}).fail(function(){
-					self.disableControls(0);
-					hideSpinner();
-				});
-			}).fail(function(){
-				self.disableControls(0);
-				hideSpinner();
-			});
-		}).fail(function(){
-			self.disableControls(0);
-			hideSpinner();
-		});
+				}).fail(onFail);
+			}).fail(onFail);
+		}).fail(onFail);
 	},
 	
-	updateProgress: function(p){
-		var progress = 0;
+	updateProgress: function(p, q) {
+		this.photosLoadedCnt   += p;
+		this.photosFilteredCnt += q;
 		
-		if(this.photosCount){
-			progress = (p/this.photosCount)*100;
+		if (!this.photosLoadedCnt) {
+			console.log("RPApi.updateProgress:: this.photosLoadedCnt == 0!");
+			return;
 		}
 		
+		var progress = this.photosLoadedCnt/this.photosCount*100;
 		this.$progressBar.progressbar("value", progress);
-		
-		this.$totalPhotosSpan.text(this.photosCount);
-		this.$ratedPhotosSpan.text(this.ratedPhotos.length);
+		this.$ratedPhotosSpan.text(this.photosFilteredCnt);
 	},
 	
 	filterPhotos: function(photos, likedThresh){
 		var filtred = [];
+		
+		if (!photos) {
+			return filtred;
+		}
 		
 		for(var i = 0; i < photos.length; ++i){
 			if(photos[i].likes.count >= likedThresh){
@@ -221,37 +247,108 @@ var RPApi = {
 		return photos.sort(likedPhotosSortFn);
 	},
 	
-	queryRatedPhotos: function(ownerId){
+	getTotalPhotosCount: function(ownerId) {
 		var self = this;
 		var ddd = $.Deferred();
+		var photosCount = 0;
 		
-		self.updateProgress(0);
-		self.ratedPhotos = [];
+		//showSpinner();
 		
-		function getNextChunk__(offset) {
-			if (offset >= self.photosCount){//done
-				ddd.resolve();
-				return;
-			}
-			VkApiWrapper.queryAllPhotosList({owner_id: ownerId, offset: offset, count: Settings.GetPhotosCunksSz, extended: 1, photo_sizes: 1, no_service_albums: 0}).done(
-				function(photos) {
-					var ratedPhotos = self.filterPhotos(photos.items, Settings.likedThresh);
-					self.ratedPhotos = self.ratedPhotos.concat(ratedPhotos);
+		var d1 = VkApiWrapper.queryAllPhotosList({owner_id: ownerId, offset: 0, count: 0});
+		var d2 = VkApiWrapper.queryPhotosList({owner_id: ownerId, album_id: 'wall', offset: 0, count: 0});
+		var d3 = VkApiWrapper.queryPhotosList({owner_id: ownerId, album_id: 'profile', offset: 0, count: 0});
+		var d4 = VkApiWrapper.queryPhotosList({owner_id: ownerId, album_id: 'saved', offset: 0, count: 0});
+		
+		function updCnt(response) {
+			photosCount += response.count;
+		}
+		
+		d1.done(updCnt);
+		d2.done(updCnt);
+		d3.done(updCnt);
+		d4.done(updCnt);
+		
+		$.when(d1, d2, d3, d4).done(function() {
+			//hideSpinner();
+			ddd.resolve(photosCount);
+		}).fail(function() {
+			//hideSpinner();
+			ddd.reject();
+		});
+
+		return ddd.promise();
+	},
+	
+	queryAllPhotos: function(ownerId, offset, maxCount){
+		var self = this;
+		var ddd = $.Deferred();
+		var photos = [];
+		
+		function getNextChunk__(offset, countLeft) {
+			var count = Math.min(countLeft, Settings.GetPhotosChunksSz);
+			VkApiWrapper.queryAllPhotosList({owner_id: ownerId, offset: offset, count: count, extended: 1, photo_sizes: 1, no_service_albums: 0}).done(
+				function(response) {
+					if(!response.items){
+						response.items = [];
+					}
 					
-					self.updateProgress(offset + photos.items.length);
-					getNextChunk__(offset + Settings.GetPhotosCunksSz);
+					var photosFiltered = self.filterPhotos(response.items, Settings.likedThresh);
+					photos = photos.concat(photosFiltered);
+					
+					ddd.notify(response.items.length, photosFiltered.length);
+					
+					if ((offset < response.count) && (countLeft > 0)) {
+						getNextChunk__(offset + response.items.length, countLeft - response.items.length);
+					} else {
+						ddd.resolve(photos);
+					}
 				}
-			).fail(function(){
+			).fail(function() {
 				ddd.reject();
 			});
 		}
 		
-		getNextChunk__(0);
+		getNextChunk__(offset, maxCount);
 		
 		return ddd.promise();
 	},
 	
-	queryAlbumInfo: function(ownerId, ratedPhotos) {
+	queryAlbumPhotos: function(ownerId, albumId, offset, maxCount){
+		var self = this;
+		var ddd = $.Deferred();
+		var photos = [];
+		
+		function getNextChunk__(offset, countLeft) {
+			var count = Math.min(countLeft, Settings.GetPhotosChunksSz);
+			VkApiWrapper.queryPhotosList({owner_id: ownerId, album_id: albumId, offset: offset, count: count, extended: 1, photo_sizes: 1, no_service_albums: 0}).done(
+				function(response) {
+					if(!response.items){
+						response.items = [];
+					}
+					
+					var photosFiltered = self.filterPhotos(response.items, Settings.likedThresh);
+					photos = photos.concat(photosFiltered);
+					
+					ddd.notify(response.items.length, photosFiltered.length);
+					
+					if ((offset < response.count) && (countLeft > 0)) {
+						getNextChunk__(offset + response.items.length, countLeft - response.items.length);
+					} else {
+						ddd.resolve(photos);
+					}
+				}
+			).fail(function() {
+				ddd.reject();
+			});
+		}
+		
+		getNextChunk__(offset, maxCount);
+		
+		return ddd.promise();
+
+	},
+	
+	queryAlbumsInfo: function(ownerId, ratedPhotos) {
 		var self = this;
 		
 		self.albumMap = {};
@@ -273,12 +370,10 @@ var RPApi = {
 		
 		return ddd.promise();
 	}
-	
 
 };
 
 //Initialize application
-var d = $.Deferred();
 $(function(){
 	Settings.vkUserId = getParameterByName("viewer_id");
 	Settings.vkSid    = getParameterByName("sid");
@@ -297,6 +392,7 @@ $(function(){
 	
 	showSpinner();
 
+	var d = $.Deferred();
 	VK.init(
 		function() {
 			// API initialization succeeded
@@ -321,10 +417,10 @@ $(function(){
 		},
 		'5.53'
 	);
-});
-
-//VK API init finished: query user data
-d.done(function(){
-	hideSpinner();
-	RPApi.init();
+	
+	//VK API init finished: query user data
+	d.done(function(){
+		hideSpinner();
+		RPApi.init();
+	});
 });
