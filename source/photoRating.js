@@ -146,6 +146,7 @@ var RPApi = {
 		
 		self.disableControls(1);
 		$("#thumbs_container").ThumbsViewer("empty");
+		self.$progressBar.progressbar("value", 0);
 		self.$totalPhotosSpan.text("0");
 		self.$chosenPhotosSpan.text("0");
 		self.$ratedPhotosSpan.text("0");
@@ -168,20 +169,18 @@ var RPApi = {
 			self.ratedPhotos = self.ratedPhotos.concat(photos);
 		}
 		
-		self.getTotalPhotosCount().done(function(count) {
+		self.getTotalPhotosCount(ownerId).done(function(count) {
 			self.photosCount = count;
 			self.$totalPhotosSpan.text(count);
 			var d1 = self.queryAllPhotos(ownerId, 0, Settings.MaxTotalPhotos);
-			var d2 = self.queryAlbumPhotos(ownerId, 'wall', 0, Settings.MaxTotalPhotos);
-			var d3 = self.queryAlbumPhotos(ownerId, 'saved', 0, Settings.MaxTotalPhotos);
-			var d4 = self.queryAlbumPhotos(ownerId, 'profile', 0, Settings.MaxTotalPhotos);
+			var d2 = self.queryAlbumPhotos(ownerId, 'saved', 0, Settings.MaxTotalPhotos);
+			var d3 = self.queryAlbumPhotos(ownerId, 'wall', 0, Settings.MaxTotalPhotos);
 			
 			d1.progress(onProgress).fail(onFail).done(pushPhotos);
 			d2.progress(onProgress).fail(onFail).done(pushPhotos);
 			d3.progress(onProgress).fail(onFail).done(pushPhotos);
-			d4.progress(onProgress).fail(onFail).done(pushPhotos);
 			
-			$.when(d1, d2, d3, d4).done(function() {
+			$.when(d1, d2, d3).done(function() {
 				self.ratedPhotos = self.sortPhotosByRating(self.ratedPhotos);
 				if( self.ratedPhotos.length > Settings.MaxRatedPhotos ){
 					self.ratedPhotos = self.ratedPhotos.slice(0, Settings.MaxRatedPhotos);
@@ -196,6 +195,7 @@ var RPApi = {
 				}
 				
 				self.queryAlbumsInfo(ownerId, self.ratedPhotos).done(function() {
+					self.$progressBar.progressbar("value", 100);
 					hideSpinner();
 					$("#thumbs_container").ThumbsViewer("updateAlbumMap", self.albumMap);
 					$("#thumbs_container").ThumbsViewer("addThumbList", self.ratedPhotos);
@@ -256,8 +256,7 @@ var RPApi = {
 		
 		var d1 = VkApiWrapper.queryAllPhotosList({owner_id: ownerId, offset: 0, count: 0});
 		var d2 = VkApiWrapper.queryPhotosList({owner_id: ownerId, album_id: 'wall', offset: 0, count: 0});
-		var d3 = VkApiWrapper.queryPhotosList({owner_id: ownerId, album_id: 'profile', offset: 0, count: 0});
-		var d4 = VkApiWrapper.queryPhotosList({owner_id: ownerId, album_id: 'saved', offset: 0, count: 0});
+		var d3 = VkApiWrapper.queryPhotosList({owner_id: ownerId, album_id: 'saved', offset: 0, count: 0});
 		
 		function updCnt(response) {
 			photosCount += response.count;
@@ -266,9 +265,8 @@ var RPApi = {
 		d1.done(updCnt);
 		d2.done(updCnt);
 		d3.done(updCnt);
-		d4.done(updCnt);
 		
-		$.when(d1, d2, d3, d4).done(function() {
+		$.when(d1, d2, d3).done(function() {
 			//hideSpinner();
 			ddd.resolve(photosCount);
 		}).fail(function() {
