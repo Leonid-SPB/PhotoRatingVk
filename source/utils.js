@@ -4,11 +4,16 @@
 
 //requires jQuery, spin.js
 
-function getParameterByName(name){
+function getParameterByName(name, rfr){
 	name = name.replace(/[\[]/, "\\\[").replace(/[\]]/, "\\\]");
 	var regexS = "[\\?&]" + name + "=([^&#]*)";
 	var regex = new RegExp(regexS);
-	var results = regex.exec(window.location.search);
+	var results;
+	if (rfr) {
+		results = regex.exec(document.referrer);
+	} else {
+		results = regex.exec(window.location.search);
+	}
 	if(results == null)
 		return null;
 	else

@@ -51,18 +51,24 @@ var RPApi = {
 	
 	init: function(){
 		var self = this;
-		this.vkUserList        = document.getElementById("vkUserList");
-		this.vkGroupList       = document.getElementById("vkGroupList");
-		this.vkIdEdit          = document.getElementById("vkIdEdit");
-		this.$progressBar      = $("#Progressbar");
-		this.$totalPhotosSpan  = $("#totalPhotosNum");
-		this.$ratedPhotosSpan  = $("#ratedPhotosNum");
-		this.$chosenPhotosSpan = $("#chosenPhotosNum");
-		this.$ratingThreshSpin = $("#RatingThreshold");
-		
-		this.vkUserList.item(1).value = Settings.vkUserId;
-		this.vkUserList.selectedIndex = 1;
-		this.onUserChanged();
+		self.vkUserList        = document.getElementById("vkUserList");
+		self.vkGroupList       = document.getElementById("vkGroupList");
+		self.vkIdEdit          = document.getElementById("vkIdEdit");
+		self.$progressBar      = $("#Progressbar");
+		self.$totalPhotosSpan  = $("#totalPhotosNum");
+		self.$ratedPhotosSpan  = $("#ratedPhotosNum");
+		self.$chosenPhotosSpan = $("#chosenPhotosNum");
+		self.$ratingThreshSpin = $("#RatingThreshold");
+
+		var uidGid = getParameterByName("uidGid", true);
+		if (uidGid) {
+			self.vkIdEdit.value = uidGid;
+			//self.onIdGidChanged();
+		} else {
+			self.vkUserList.item(1).value = Settings.vkUserId;
+			self.vkUserList.selectedIndex = 1;
+			self.onUserChanged();
+		}		
 		
 		showSpinner();
 		var d1 = VkApiWrapper.queryFriends({user_id: Settings.vkUserId, order: "name", count: Settings.MaxFriendsList, fields: "first_name,last_name"}).done(function(friends){
@@ -142,7 +148,7 @@ var RPApi = {
 	
 	onGoButton: function(){
 		var self = this;
-		var ownerId = +this.vkIdEdit.value;
+		var ownerId = +self.vkIdEdit.value;
 		
 		self.disableControls(1);
 		$("#thumbs_container").ThumbsViewer("empty");
