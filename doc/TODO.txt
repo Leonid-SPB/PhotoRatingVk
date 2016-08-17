@@ -2,7 +2,6 @@ pending:
 ) improve gallery support while thumbs are loadding
 
 ) smart gid/uid search, resolve title by guid/uid and add to list
-) fix error with album access (ignore inaccessible albums)
 ) share link button: https://new.vk.com/app3217496_105876?uidGid=334884
 
 ) new Jquery
@@ -11,7 +10,8 @@ pending:
 ) style tuning: better loadding gif, fonts, etc...
 
 done:
-x) query photos from service albums (wall, saved, etc)
+x) fix error with album access (ignore inaccessible albums)
+x) query photos from service albums (wall, saved, etc), fix error with duplicate photos
 x) timeout-retry for VK api calls
 x) caption: album name and link to original. title: likes, photo xx of yy?
 x) new VK api

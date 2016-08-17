@@ -181,12 +181,14 @@ var RPApi = {
 			var d1 = self.queryAllPhotos(ownerId, 0, Settings.MaxTotalPhotos);
 			var d2 = self.queryAlbumPhotos(ownerId, 'saved', 0, Settings.MaxTotalPhotos);
 			var d3 = self.queryAlbumPhotos(ownerId, 'wall', 0, Settings.MaxTotalPhotos);
+			var d4 = self.queryAlbumPhotos(ownerId, 'profile', 0, Settings.MaxTotalPhotos);
 			
 			d1.progress(onProgress).fail(onFail).done(pushPhotos);
 			d2.progress(onProgress).fail(onFail).done(pushPhotos);
 			d3.progress(onProgress).fail(onFail).done(pushPhotos);
+			d4.progress(onProgress).fail(onFail).done(pushPhotos);
 			
-			$.when(d1, d2, d3).done(function() {
+			$.when(d1, d2, d3, d4).done(function() {
 				self.ratedPhotos = self.sortPhotosByRating(self.ratedPhotos);
 				if( self.ratedPhotos.length > Settings.MaxRatedPhotos ){
 					self.ratedPhotos = self.ratedPhotos.slice(0, Settings.MaxRatedPhotos);
@@ -260,9 +262,10 @@ var RPApi = {
 		
 		//showSpinner();
 		
-		var d1 = VkApiWrapper.queryAllPhotosList({owner_id: ownerId, offset: 0, count: 0});
+		var d1 = VkApiWrapper.queryAllPhotosList({owner_id: ownerId, offset: 0, count: 0, no_service_albums: 1});
 		var d2 = VkApiWrapper.queryPhotosList({owner_id: ownerId, album_id: 'wall', offset: 0, count: 0});
 		var d3 = VkApiWrapper.queryPhotosList({owner_id: ownerId, album_id: 'saved', offset: 0, count: 0});
+		var d4 = VkApiWrapper.queryPhotosList({owner_id: ownerId, album_id: 'profile', offset: 0, count: 0});
 		
 		function updCnt(response) {
 			photosCount += response.count;
@@ -271,8 +274,9 @@ var RPApi = {
 		d1.done(updCnt);
 		d2.done(updCnt);
 		d3.done(updCnt);
+		d4.done(updCnt);
 		
-		$.when(d1, d2, d3).done(function() {
+		$.when(d1, d2, d3, d4).done(function() {
 			//hideSpinner();
 			ddd.resolve(photosCount);
 		}).fail(function() {
@@ -290,7 +294,7 @@ var RPApi = {
 		
 		function getNextChunk__(offset, countLeft) {
 			var count = Math.min(countLeft, Settings.GetPhotosChunksSz);
-			VkApiWrapper.queryAllPhotosList({owner_id: ownerId, offset: offset, count: count, extended: 1, photo_sizes: 1, no_service_albums: 0}).done(
+			VkApiWrapper.queryAllPhotosList({owner_id: ownerId, offset: offset, count: count, extended: 1, photo_sizes: 1, no_service_albums: 1}).done(
 				function(response) {
 					if(!response.items){
 						response.items = [];
