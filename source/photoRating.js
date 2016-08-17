@@ -97,7 +97,7 @@ var RPApi = {
 		if(this.vkGroupList.selectedIndex == 0){
 			this.vkIdEdit.value = "";
 		}else{
-			this.vkIdEdit.value = -this.vkGroupList.item(this.vkGroupList.selectedIndex).value;
+			this.vkIdEdit.value = this.vkGroupList.item(this.vkGroupList.selectedIndex).value;
 		}
 		this.vkUserList.selectedIndex = 0;
 	},

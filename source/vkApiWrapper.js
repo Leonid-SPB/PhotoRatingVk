@@ -11,6 +11,10 @@ var VkApiWrapper = {
 	apiCallTimeout    : 2000,
 	apiCallMaxRetries : 4,
 	apiTmoutMultiplier: 2.0,
+	ApiErrCodes       : {
+		AccessDenied     : 15,
+		AlbumAccessDenied: 200
+	},
 
 	rateLimiter       : null,
 
@@ -60,9 +64,12 @@ var VkApiWrapper = {
 					
 					if ("response" in data) {
 						d.resolve(data.response);
-					} else {
-						console.log(data.error.error_msg);
+					} else if ("error" in data) {
+						console.log("VkApiWrapper: " + data.error.error_msg);
 						d.reject(data.error);
+					} else {
+						console.log("VkApiWrapper: Unknow error!");
+						d.reject(null);
 					}
 				});
 			});
@@ -75,7 +82,7 @@ var VkApiWrapper = {
 
 	queryAlbumsList: function(options) {
 		var self = this;
-		var p = this.callVkApi("photos.getAlbums", options);
+		var p = self.callVkApi("photos.getAlbums", options);
 		p.fail(function(){
 			self.displayError("Не удалось получить список альбомов! Попробуйте перезагрузить приложение.");
 		});
@@ -84,16 +91,31 @@ var VkApiWrapper = {
 
 	queryPhotosList: function(options) {
 		var self = this;
-		var p = this.callVkApi("photos.get", options);
-		p.fail(function(){
-			self.displayError("Не удалось получить список фотографий из выбранного альбома! Попробуйте перезагрузить приложение.");
+		var d = $.Deferred();
+		
+		self.callVkApi("photos.get", options).done(function(response) {
+			d.resolve(response);
+		}).fail(function(error) {
+			if ( ("error_code" in error) && ((error.error_code == self.ApiErrCodes.AccessDenied) ||
+				(error.error_code == self.ApiErrCodes.AlbumAccessDenied))
+			) { //handle access denied error, return empty data
+				var resp = {
+					items: [],
+					count: 0
+				};
+				d.resolve(resp);
+			} else {
+				self.displayError("Не удалось получить список фотографий из выбранного альбома! Попробуйте перезагрузить приложение.");
+				d.reject();
+			}
 		});
-		return p;
+		
+		return d;
 	},
 	
 	queryAllPhotosList: function(options) {
 		var self = this;
-		var p = this.callVkApi("photos.getAll", options);
+		var p = self.callVkApi("photos.getAll", options);
 		p.fail(function(){
 			self.displayError("Не удалось получить список фотографий пользователя или группы! Попробуйте перезагрузить приложение.");
 		});
@@ -102,7 +124,7 @@ var VkApiWrapper = {
 	
 	queryFriends: function(options) {
 		var self = this;
-		var p = this.callVkApi("friends.get", options);
+		var p = self.callVkApi("friends.get", options);
 		p.fail(function(){
 			self.displayError("Не удалось получить список друзей! Попробуйте перезагрузить приложение.");
 		});
@@ -111,7 +133,7 @@ var VkApiWrapper = {
 	
 	queryGroupsList: function(options){
 		var self = this;
-		var p = this.callVkApi("groups.get", options);
+		var p = self.callVkApi("groups.get", options);
 		p.fail(function(){
 			self.displayError("Не удалось получить список групп пользователя! Попробуйте перезагрузить приложение.");
 		});
@@ -120,7 +142,7 @@ var VkApiWrapper = {
 
 	movePhoto: function(ownerId, targetAlbumId, photoId){
 		var self = this;
-		var p = this.callVkApi("photos.move", {owner_id: ownerId, target_album_id: targetAlbumId, photo_id: photoId});
+		var p = self.callVkApi("photos.move", {owner_id: ownerId, target_album_id: targetAlbumId, photo_id: photoId});
 		p.fail(function(){
 			self.displayError("Не удалось переместить фотографию! Попробуйте перезагрузить приложение.");
 		});
