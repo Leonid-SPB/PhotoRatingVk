@@ -80,7 +80,7 @@ var VkApiWrapper = {
 		return d.promise();
 	},
 
-	queryAlbumsList: function(options) {
+	queryAlbums: function(options) {
 		var self = this;
 		var p = self.callVkApi("photos.getAlbums", options);
 		p.fail(function(){
@@ -89,7 +89,7 @@ var VkApiWrapper = {
 		return p;
 	},
 
-	queryPhotosList: function(options) {
+	queryPhotos: function(options) {
 		var self = this;
 		var d = $.Deferred();
 		
@@ -113,7 +113,7 @@ var VkApiWrapper = {
 		return d;
 	},
 	
-	queryAllPhotosList: function(options) {
+	queryAllPhotos: function(options) {
 		var self = this;
 		var p = self.callVkApi("photos.getAll", options);
 		p.fail(function(){
@@ -131,11 +131,29 @@ var VkApiWrapper = {
 		return p;
 	},
 	
-	queryGroupsList: function(options){
+	queryUser: function(options) {
+		var self = this;
+		var p = self.callVkApi("users.get", options);
+		p.fail(function(){
+			self.displayError("Не удалось получить информацию о пользователе! Попробуйте перезагрузить приложение.");
+		});
+		return p;
+	},
+	
+	queryUserGroups: function(options){
 		var self = this;
 		var p = self.callVkApi("groups.get", options);
 		p.fail(function(){
 			self.displayError("Не удалось получить список групп пользователя! Попробуйте перезагрузить приложение.");
+		});
+		return p;
+	},
+	
+	queryGroup: function(options) {
+		var self = this;
+		var p = self.callVkApi("groups.getById", options);
+		p.fail(function(){
+			self.displayError("Не удалось получить информацию о группе/странице! Попробуйте перезагрузить приложение.");
 		});
 		return p;
 	},
@@ -146,6 +164,15 @@ var VkApiWrapper = {
 		p.fail(function(){
 			self.displayError("Не удалось переместить фотографию! Попробуйте перезагрузить приложение.");
 		});
+		return p;
+	},
+	
+	resolveScreenName: function(options){
+		var self = this;
+		var p = self.callVkApi("utils.resolveScreenName", options);
+		/*p.fail(function(){
+			self.displayError("Не удалось получить информацию о пользователе/группе! Попробуйте перезагрузить приложение.");
+		});*/
 		return p;
 	},
 

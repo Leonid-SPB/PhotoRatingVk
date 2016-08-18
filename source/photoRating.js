@@ -19,7 +19,7 @@ var Settings = {
 	BlinkCount      : 12,
 	RedirectDelay   : 3000,
 	MaxGroupNameLen : 40,
-	MaxFriendsList  : 1000,
+	MaxFriendsList  : 500,
 	
 	vkUserId        : null,
 	vkSid           : null,
@@ -42,7 +42,10 @@ var RPApi = {
 	$ratedPhotosSpan : null,
 	$chosenPhotosSpan: null,
 	$ratingThreshSpin: null,
-	
+
+	ownerId          : 0,
+	friendMap        : [],
+	groupMap         : [],
 	ratedPhotos      : [],
 	albumMap         : {},
 	photosCount      : 0,
@@ -59,32 +62,48 @@ var RPApi = {
 		self.$ratedPhotosSpan  = $("#ratedPhotosNum");
 		self.$chosenPhotosSpan = $("#chosenPhotosNum");
 		self.$ratingThreshSpin = $("#RatingThreshold");
-
-		var uidGid = getParameterByName("uidGid", true);
-		if (uidGid) {
-			self.vkIdEdit.value = uidGid;
-			//self.onIdGidChanged();
-		} else {
-			self.vkUserList.item(1).value = Settings.vkUserId;
-			self.vkUserList.selectedIndex = 1;
-			self.onUserChanged();
-		}		
 		
+		self.disableControls(1);
 		showSpinner();
-		var d1 = VkApiWrapper.queryFriends({user_id: Settings.vkUserId, order: "name", count: Settings.MaxFriendsList, fields: "first_name,last_name"}).done(function(friends){
-			for(var i = 0; i < friends.items.length; i++){
-				var opt = new Option(friends.items[i].first_name + " " + friends.items[i].last_name, friends.items[i].id, false, false);
-				self.vkUserList.add(opt, null);
+		
+		var d1 = VkApiWrapper.queryFriends({user_id: Settings.vkUserId, count: Settings.MaxFriendsList, fields: "first_name,last_name,screen_name"}).done(function(friends) {
+			friends = self.filterFriendList(friends.items);
+			
+			for(var i = 0; i < friends.length; i++){
+				friends[i].opt = new Option(friends[i].title, friends[i].screen_name, false, false);
+				self.friendMap[friends[i].screen_name] = friends[i];
+				self.vkUserList.add(friends[i].opt, null);
 			}
 		});
 		
-		var d2 = VkApiWrapper.queryGroupsList({user_id: Settings.vkUserId, extended: 1}).done(function(groups){
-			self.fillGroupsListBox(groups, vkGroupList);
+		var d2 = VkApiWrapper.queryUserGroups({user_id: Settings.vkUserId, count: Settings.MaxFriendsList, extended: 1}).done(function(groups){
+			groups = self.filterGroupList(groups.items);
+			
+			for(var i = 0; i < groups.length; i++){
+				groups[i].opt = new Option(groups[i].title, groups[i].screen_name, false, false);
+				self.groupMap[groups[i].screen_name] = groups[i];
+				self.vkGroupList.add(groups[i].opt, null);
+			}
 		});
 		
-		$.when(d1, d2).done(function(){
+		$.when(d1, d2).done(function() {
 			hideSpinner();
+			self.disableControls(0);
 			VkApiWrapper.welcomeCheck();
+			
+			var uidGid = getParameterByName("uidGid", true);
+			if (uidGid) {
+				self.vkIdEdit.value = uidGid;
+				self.onUidGidChanged();
+				//resolve screen name?
+			} else {
+				self.vkUserList.item(1).value = Settings.vkUserId;
+				self.vkUserList.selectedIndex = 1;
+				self.onUserChanged();
+			}		
+		}).fail(function() {
+			hideSpinner();
+			self.disableControls(1);
 		});
 	},
 	
@@ -94,15 +113,11 @@ var RPApi = {
 	},
 	
 	onGroupChanged: function(){
-		if(this.vkGroupList.selectedIndex == 0){
-			this.vkIdEdit.value = "";
-		}else{
-			this.vkIdEdit.value = this.vkGroupList.item(this.vkGroupList.selectedIndex).value;
-		}
+		this.vkIdEdit.value = this.vkGroupList.item(this.vkGroupList.selectedIndex).value;
 		this.vkUserList.selectedIndex = 0;
 	},
 	
-	onIdGidChanged: function(){
+	onUidGidChanged: function(){
 		this.vkUserList.selectedIndex = 0;
 		this.vkGroupList.selectedIndex = 0;
 	},
@@ -123,11 +138,22 @@ var RPApi = {
 		self.$ratingThreshSpin.spinner(dstr);
 	},
 	
-
-	fillGroupsListBox: function(groups, listSelect) {
-		groups.items = groups.items.sort(function(a, b){
-			var ta = a.name.toLowerCase();
-			var tb = b.name.toLowerCase();
+	//remove deactivated, create title, sort alphabetically
+	filterFriendList : function(friendList) {
+		var friends = [];
+		for(var i = 0; i < friendList.length; ++i) {
+			if ("deactivated" in friendList[i]) {
+				continue;
+			}
+			//to convert escape sequences (&amp;, &quot;...) to chars
+			var title = $("<div>").html(friendList[i].first_name + " " + friendList[i].last_name).text();
+			friendList[i].title = title;
+			friends.push(friendList[i]);
+		}
+		
+		friends = friends.sort(function(a, b) {
+			var ta = a.title.toLowerCase();
+			var tb = b.title.toLowerCase();
 			if(ta < tb){
 				return -1;
 			}else if(ta > tb){
@@ -136,19 +162,125 @@ var RPApi = {
 			return 0;
 		});
 		
-		for(var i = 0; i < groups.items.length; i++){
-			var title = $("<div>").html(groups.items[i].name).text();//to convert escape sequences (&amp;, &quot;...) to chars
+		return friends;
+	},
+	
+	filterGroupList : function(groupList) {
+		var groups = [];
+		for(var i = 0; i < groupList.length; ++i) {
+			if ("deactivated" in groupList[i]) {
+				continue;
+			}
+			//to convert escape sequences (&amp;, &quot;...) to chars
+			var title = $("<div>").html(groupList[i].name).text();
 			if(title.length > Settings.MaxGroupNameLen){
 				title = title.substring(0, Settings.MaxGroupNameLen) + "...";
 			}
-			var opt = new Option(title, -groups.items[i].id, false, false);//NOTE: using minus for group ID
-			listSelect.add(opt, null);
+			groupList[i].title = title;
+			groups.push(groupList[i]);
 		}
+		
+		groups = groups.sort(function(a, b) {
+			var ta = a.title.toLowerCase();
+			var tb = b.title.toLowerCase();
+			if(ta < tb){
+				return -1;
+			}else if(ta > tb){
+				return 1;
+			}
+			return 0;
+		});
+		
+		return groups;
+	},
+	
+	resolveUidGid: function(str) {
+		var self = this;
+		var ddd = $.Deferred();
+		
+		str = str.trim();
+		if (str in self.groupMap) {
+			self.vkUserList.selectedIndex = self.groupMap[str].opt.index;
+			self.onUserChanged();
+			
+			ddd.resolve(self.groupMap[str], false);
+		} else if (str in self.friendMap) {
+			self.vkUserList.selectedIndex = self.friendMap[str].opt.index;
+			self.onGroupChanged();
+			
+			ddd.resolve(self.friendMap[str], true);
+		} else {
+			self.resolveUidGid__(str).done(function (userGrp, isUser) {
+				if (isUser) {
+					userGrp.opt = new Option(userGrp[i].title, userGrp[i].screen_name, false, false);
+					self.friendMap[userGrp.screen_name] = userGrp;
+					
+					self.vkUserList.add(userGrp.opt, 1);
+					self.vkUserList.selectedIndex = 1;
+					self.onUserChanged();
+				} else {
+					userGrp.opt = new Option(userGrp[i].title, userGrp[i].screen_name, false, false);
+					self.groupMap[userGrp.screen_name] = userGrp;
+					
+					self.vkGroupList.add(userGrp.opt, 1);
+					self.vkUserList.selectedIndex = 1;
+					self.onGroupChanged();
+				}
+				
+				ddd.resolve(userGrp, isUser);
+			}).fail(function () {
+				ddd.reject();
+			});
+		}
+		
+		return ddd;
+	},
+	
+	resolveUidGid__: function(str) {
+		var self = this;
+		var ddd = $.Deferred();
+
+		function onFail() {
+			self.displayError("Не удалось получить информацию о пользователе/группе: '" + str + "'");
+			ddd.reject();
+		}
+		
+		VkApiWrapper.resolveScreenName({screen_name: str}).done(function(resp) {
+			if (!resp) {
+				onFail();
+				return;
+			}
+			
+			if (resp.type == "user") {
+				VkApiWrapper.queryUser({user_ids: resp.object_id, fields: "first_name,last_name,screen_name"}).done(function(friends) {
+					friends = self.filterFriendList(friends);
+					if(friends.length){
+						ddd.resolve(friends[0], true);
+					} else {
+						onFail();
+					}
+				}).fail(onFail);
+			} else if ((resp.type == "group") || (resp.type == "page")) {
+				VkApiWrapper.queryGroup({group_ids: resp.object_id).done(function(groups) {
+					groups = self.filterGroupList(groups);
+					if(friends.length){
+						ddd.resolve(groups[0], false);
+					} else {
+						onFail();
+					}
+				}).fail(onFail);
+			} else {
+				onFail();
+				return;
+			}
+			
+		}).fail(onFail);
+		
+		return ddd;
 	},
 	
 	onGoButton: function(){
 		var self = this;
-		var ownerId = +self.vkIdEdit.value;
 		
 		self.disableControls(1);
 		$("#thumbs_container").ThumbsViewer("empty");
@@ -163,55 +295,60 @@ var RPApi = {
 		showSpinner();
 		
 		function onFail() {
-			self.disableControls(0);
+			self.disableControls(1);
 			hideSpinner();
 		}
 		
-		function onProgress(p, q) {
-			self.updateProgress(p, q);
-		}
-		
-		function pushPhotos(photos) {
-			self.ratedPhotos = self.ratedPhotos.concat(photos);
-		}
-		
-		self.getTotalPhotosCount(ownerId).done(function(count) {
-			self.photosCount = count;
-			self.$totalPhotosSpan.text(count);
-			var d1 = self.queryAllPhotos(ownerId, 0, Settings.MaxTotalPhotos);
-			var d2 = self.queryAlbumPhotos(ownerId, 'saved', 0, Settings.MaxTotalPhotos);
-			var d3 = self.queryAlbumPhotos(ownerId, 'wall', 0, Settings.MaxTotalPhotos);
-			var d4 = self.queryAlbumPhotos(ownerId, 'profile', 0, Settings.MaxTotalPhotos);
+		self.resolveUidGid(self.vkIdEdit.value).done(function (userGroup, isUser) {
+			var ownerId = +userGroup.id;
+			ownerId = isUser ? ownerId: -ownerId;//make negative ID for groups/pages
 			
-			d1.progress(onProgress).fail(onFail).done(pushPhotos);
-			d2.progress(onProgress).fail(onFail).done(pushPhotos);
-			d3.progress(onProgress).fail(onFail).done(pushPhotos);
-			d4.progress(onProgress).fail(onFail).done(pushPhotos);
+			function onProgress(p, q) {
+				self.updateProgress(p, q);
+			}
 			
-			$.when(d1, d2, d3, d4).done(function() {
-				self.ratedPhotos = self.sortPhotosByRating(self.ratedPhotos);
-				if( self.ratedPhotos.length > Settings.MaxRatedPhotos ){
-					self.ratedPhotos = self.ratedPhotos.slice(0, Settings.MaxRatedPhotos);
-				}
-				self.$chosenPhotosSpan.text(self.ratedPhotos.length);
+			function pushPhotos(photos) {
+				self.ratedPhotos = self.ratedPhotos.concat(photos);
+			}
+
+			self.getTotalPhotosCount(ownerId).done(function(count) {
+				self.photosCount = count;
+				self.$totalPhotosSpan.text(count);
+				var d1 = self.queryAllPhotos(ownerId, 0, Settings.MaxTotalPhotos);
+				var d2 = self.queryAlbumPhotos(ownerId, 'saved', 0, Settings.MaxTotalPhotos);
+				var d3 = self.queryAlbumPhotos(ownerId, 'wall', 0, Settings.MaxTotalPhotos);
+				var d4 = self.queryAlbumPhotos(ownerId, 'profile', 0, Settings.MaxTotalPhotos);
 				
-				if ( !self.ratedPhotos.length ){ //no photos found
-					hideSpinner();
-					displayError("Не удалось составить рейтинг! Не найдено фотографий, с рейтингом выше " + Settings.likedThresh, "globalErrorBox", Settings.ErrorHideAfter);
-					self.disableControls(0);
-					return;
-				}
+				d1.progress(onProgress).fail(onFail).done(pushPhotos);
+				d2.progress(onProgress).fail(onFail).done(pushPhotos);
+				d3.progress(onProgress).fail(onFail).done(pushPhotos);
+				d4.progress(onProgress).fail(onFail).done(pushPhotos);
 				
-				self.queryAlbumsInfo(ownerId, self.ratedPhotos).done(function() {
-					self.$progressBar.progressbar("value", 100);
-					hideSpinner();
-					$("#thumbs_container").ThumbsViewer("updateAlbumMap", self.albumMap);
-					$("#thumbs_container").ThumbsViewer("addThumbList", self.ratedPhotos);
-					self.disableControls(0);
-					
-					if( self.ratedPhotos.length > 10 ){
-						VkApiWrapper.rateRequest(Settings.RateRequestDelay);
+				$.when(d1, d2, d3, d4).done(function() {
+					self.ratedPhotos = self.sortPhotosByRating(self.ratedPhotos);
+					if( self.ratedPhotos.length > Settings.MaxRatedPhotos ){
+						self.ratedPhotos = self.ratedPhotos.slice(0, Settings.MaxRatedPhotos);
 					}
+					self.$chosenPhotosSpan.text(self.ratedPhotos.length);
+					
+					if ( !self.ratedPhotos.length ){ //no photos found
+						hideSpinner();
+						displayError("Не удалось составить рейтинг! Не найдено фотографий, с рейтингом выше " + Settings.likedThresh, "globalErrorBox", Settings.ErrorHideAfter);
+						self.disableControls(0);
+						return;
+					}
+					
+					self.queryAlbumsInfo(ownerId, self.ratedPhotos).done(function() {
+						self.$progressBar.progressbar("value", 100);
+						hideSpinner();
+						$("#thumbs_container").ThumbsViewer("updateAlbumMap", self.albumMap);
+						$("#thumbs_container").ThumbsViewer("addThumbList", self.ratedPhotos);
+						self.disableControls(0);
+						
+						if( self.ratedPhotos.length > 10 ){
+							VkApiWrapper.rateRequest(Settings.RateRequestDelay);
+						}
+					}).fail(onFail);
 				}).fail(onFail);
 			}).fail(onFail);
 		}).fail(onFail);
@@ -262,10 +399,10 @@ var RPApi = {
 		
 		//showSpinner();
 		
-		var d1 = VkApiWrapper.queryAllPhotosList({owner_id: ownerId, offset: 0, count: 0, no_service_albums: 1});
-		var d2 = VkApiWrapper.queryPhotosList({owner_id: ownerId, album_id: 'wall', offset: 0, count: 0});
-		var d3 = VkApiWrapper.queryPhotosList({owner_id: ownerId, album_id: 'saved', offset: 0, count: 0});
-		var d4 = VkApiWrapper.queryPhotosList({owner_id: ownerId, album_id: 'profile', offset: 0, count: 0});
+		var d1 = VkApiWrapper.queryAllPhotos({owner_id: ownerId, offset: 0, count: 0, no_service_albums: 1});
+		var d2 = VkApiWrapper.queryPhotos({owner_id: ownerId, album_id: 'wall', offset: 0, count: 0});
+		var d3 = VkApiWrapper.queryPhotos({owner_id: ownerId, album_id: 'saved', offset: 0, count: 0});
+		var d4 = VkApiWrapper.queryPhotos({owner_id: ownerId, album_id: 'profile', offset: 0, count: 0});
 		
 		function updCnt(response) {
 			photosCount += response.count;
@@ -294,7 +431,7 @@ var RPApi = {
 		
 		function getNextChunk__(offset, countLeft) {
 			var count = Math.min(countLeft, Settings.GetPhotosChunksSz);
-			VkApiWrapper.queryAllPhotosList({owner_id: ownerId, offset: offset, count: count, extended: 1, photo_sizes: 1, no_service_albums: 1}).done(
+			VkApiWrapper.queryAllPhotos({owner_id: ownerId, offset: offset, count: count, extended: 1, photo_sizes: 1, no_service_albums: 1}).done(
 				function(response) {
 					if(!response.items){
 						response.items = [];
@@ -328,7 +465,7 @@ var RPApi = {
 		
 		function getNextChunk__(offset, countLeft) {
 			var count = Math.min(countLeft, Settings.GetPhotosChunksSz);
-			VkApiWrapper.queryPhotosList({owner_id: ownerId, album_id: albumId, offset: offset, count: count, extended: 1, photo_sizes: 1, no_service_albums: 0}).done(
+			VkApiWrapper.queryPhotos({owner_id: ownerId, album_id: albumId, offset: offset, count: count, extended: 1, photo_sizes: 1, no_service_albums: 0}).done(
 				function(response) {
 					if(!response.items){
 						response.items = [];
@@ -366,7 +503,7 @@ var RPApi = {
 		
 		var ddd = $.Deferred();
 		var albumListStr = Object.keys(self.albumMap).join();
-		VkApiWrapper.queryAlbumsList({owner_id: ownerId, album_ids: albumListStr}).done(function(response){
+		VkApiWrapper.queryAlbums({owner_id: ownerId, album_ids: albumListStr}).done(function(response){
 			for (var i = 0; i < response.count; ++i) {
 				self.albumMap[response.items[i].id] = response.items[i].title;
 			}

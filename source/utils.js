@@ -4,7 +4,7 @@
 
 //requires jQuery, spin.js
 
-function getParameterByName(name, rfr){
+function getParameterByName(name, rfr) {
 	name = name.replace(/[\[]/, "\\\[").replace(/[\]]/, "\\\]");
 	var regexS = "[\\?&]" + name + "=([^&#]*)";
 	var regex = new RegExp(regexS);
@@ -57,7 +57,7 @@ $.fn.spin = function(opts) {
 	return this;
 };
 
-function showSpinner(){
+function showSpinner() {
 	var opts = {
 		lines: 17,
 		length: 26,
@@ -78,7 +78,7 @@ function showSpinner(){
 	$("body").spin(opts);
 }
 
-function hideSpinner(){
+function hideSpinner() {
 	$("body").spin(false);
 }
 
