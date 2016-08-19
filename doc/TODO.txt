@@ -1,15 +1,20 @@
 pending:
 ) improve gallery support while thumbs are loadding
-
-) smart gid/uid search, resolve title by guid/uid and add to list
 ) share link button: https://new.vk.com/app3217496_105876?uidGid=334884
+) query self screen name
+) use "enter" to start
 
 ) new Jquery
+) test on all modern browsers: chrome, firefox, edge, ie
+) donate button
 
-) refactoring/cleanup
+) refactoring/cleanup (clean global namespace)
 ) style tuning: better loadding gif, fonts, etc...
+) update wiki page
+) how to use video
 
 done:
+x) smart gid/uid search, resolve title by guid/uid and add to list
 x) fix error with album access (ignore inaccessible albums)
 x) query photos from service albums (wall, saved, etc), fix error with duplicate photos
 x) timeout-retry for VK api calls

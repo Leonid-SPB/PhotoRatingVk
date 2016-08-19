@@ -63,6 +63,10 @@ var RPApi = {
 		self.$chosenPhotosSpan = $("#chosenPhotosNum");
 		self.$ratingThreshSpin = $("#RatingThreshold");
 		
+		var screen_name = "id" + Settings.vkUserId;
+		self.vkUserList.item(1).value = screen_name;
+		self.friendMap[screen_name] = {opt: self.vkUserList.item(1), title: "Я", id: +Settings.vkUserId};
+		
 		self.disableControls(1);
 		showSpinner();
 		
@@ -97,7 +101,6 @@ var RPApi = {
 				self.onUidGidChanged();
 				//resolve screen name?
 			} else {
-				self.vkUserList.item(1).value = Settings.vkUserId;
 				self.vkUserList.selectedIndex = 1;
 				self.onUserChanged();
 			}		
@@ -199,31 +202,31 @@ var RPApi = {
 		var ddd = $.Deferred();
 		
 		str = str.trim();
-		if (str in self.groupMap) {
-			self.vkUserList.selectedIndex = self.groupMap[str].opt.index;
+		if (str in self.friendMap) {
+			self.vkUserList.selectedIndex = self.friendMap[str].opt.index;
 			self.onUserChanged();
 			
-			ddd.resolve(self.groupMap[str], false);
-		} else if (str in self.friendMap) {
-			self.vkUserList.selectedIndex = self.friendMap[str].opt.index;
+			ddd.resolve(self.friendMap[str], true);
+		} else if (str in self.groupMap) {
+			self.vkGroupList.selectedIndex = self.groupMap[str].opt.index;
 			self.onGroupChanged();
 			
-			ddd.resolve(self.friendMap[str], true);
+			ddd.resolve(self.groupMap[str], false);
 		} else {
 			self.resolveUidGid__(str).done(function (userGrp, isUser) {
 				if (isUser) {
-					userGrp.opt = new Option(userGrp[i].title, userGrp[i].screen_name, false, false);
+					userGrp.opt = new Option(userGrp.title, userGrp.screen_name, false, false);
 					self.friendMap[userGrp.screen_name] = userGrp;
 					
 					self.vkUserList.add(userGrp.opt, 1);
 					self.vkUserList.selectedIndex = 1;
 					self.onUserChanged();
 				} else {
-					userGrp.opt = new Option(userGrp[i].title, userGrp[i].screen_name, false, false);
+					userGrp.opt = new Option(userGrp.title, userGrp.screen_name, false, false);
 					self.groupMap[userGrp.screen_name] = userGrp;
 					
 					self.vkGroupList.add(userGrp.opt, 1);
-					self.vkUserList.selectedIndex = 1;
+					self.vkGroupList.selectedIndex = 1;
 					self.onGroupChanged();
 				}
 				
@@ -261,9 +264,9 @@ var RPApi = {
 					}
 				}).fail(onFail);
 			} else if ((resp.type == "group") || (resp.type == "page")) {
-				VkApiWrapper.queryGroup({group_ids: resp.object_id).done(function(groups) {
+				VkApiWrapper.queryGroup({group_ids: resp.object_id}).done(function(groups) {
 					groups = self.filterGroupList(groups);
-					if(friends.length){
+					if(groups.length){
 						ddd.resolve(groups[0], false);
 					} else {
 						onFail();
