@@ -1,4 +1,5 @@
 pending:
+) add tooltips
 ) improve gallery support while thumbs are loadding
 ) share link button: https://new.vk.com/app3217496_105876?uidGid=334884
 ) improve gallery navigation buttons

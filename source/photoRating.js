@@ -257,16 +257,11 @@ var RPApi = {
 		var ddd = $.Deferred();
 
 		function onFail() {
-			self.displayError("Не удалось получить информацию о пользователе/группе: '" + str + "'");
+			self.displayError("Не удалось получить информацию о пользователе/группе: '" + str + "'", Settings.ErrorHideAfter);
 			ddd.reject();
 		}
 		
-		VkApiWrapper.resolveScreenName({screen_name: str}).done(function(resp) {
-			if (!resp) {
-				onFail();
-				return;
-			}
-			
+		VkApiWrapper.resolveScreenName({screen_name: str}, true).done(function(resp) {
 			if (resp.type == "user") {
 				VkApiWrapper.queryUser({user_ids: resp.object_id, fields: "first_name,last_name,screen_name"}).done(function(friends) {
 					friends = self.filterFriendList(friends);
@@ -311,7 +306,7 @@ var RPApi = {
 		showSpinner();
 		
 		function onFail() {
-			self.disableControls(1);
+			self.disableControls(0);
 			hideSpinner();
 		}
 		
@@ -349,7 +344,7 @@ var RPApi = {
 					
 					if ( !self.ratedPhotos.length ){ //no photos found
 						hideSpinner();
-						displayError("Не удалось составить рейтинг! Не найдено фотографий, с рейтингом выше " + Settings.likedThresh, "globalErrorBox", Settings.ErrorHideAfter);
+						self.displayError("Не удалось составить рейтинг! Не найдено фотографий, с рейтингом выше " + Settings.likedThresh,  Settings.ErrorHideAfter);
 						self.disableControls(0);
 						return;
 					}
@@ -530,7 +525,12 @@ var RPApi = {
 		});
 		
 		return ddd.promise();
-	}
+	},
+	
+	displayError : function(errMsg, hideAfter) {
+		//use global displayError(msg, errorBoxId)
+		displayError(errMsg, "globalErrorBox", hideAfter);
+	},
 
 };
 
