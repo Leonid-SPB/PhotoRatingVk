@@ -62,13 +62,17 @@ var RPApi = {
 		self.$ratedPhotosSpan  = $("#ratedPhotosNum");
 		self.$chosenPhotosSpan = $("#chosenPhotosNum");
 		self.$ratingThreshSpin = $("#RatingThreshold");
-		
-		var screen_name = "id" + Settings.vkUserId;
-		self.vkUserList.item(1).value = screen_name;
-		self.friendMap[screen_name] = {opt: self.vkUserList.item(1), title: "Я", id: +Settings.vkUserId};
-		
+
 		self.disableControls(1);
 		showSpinner();
+		
+		var d0 = VkApiWrapper.queryUser({user_ids: Settings.vkUserId, fields: "first_name,last_name,screen_name"}).done(function(me_) {
+			me = me_[0];
+			me.title = self.vkUserList.item(1).text;
+			me.opt = self.vkUserList.item(1);
+			me.opt.value = me.screen_name;
+			self.friendMap[me.screen_name] = me;
+		});
 		
 		var d1 = VkApiWrapper.queryFriends({user_id: Settings.vkUserId, count: Settings.MaxFriendsList, fields: "first_name,last_name,screen_name"}).done(function(friends) {
 			friends = self.filterFriendList(friends.items);
@@ -90,20 +94,29 @@ var RPApi = {
 			}
 		});
 		
-		$.when(d1, d2).done(function() {
-			hideSpinner();
-			self.disableControls(0);
-			VkApiWrapper.welcomeCheck();
-			
+		
+		$.when(d0, d1, d2).done(function() {
 			var uidGid = getParameterByName("uidGid", true);
-			if (uidGid) {
-				self.vkIdEdit.value = uidGid;
-				self.onUidGidChanged();
-				//resolve screen name?
-			} else {
+			
+			if (!uidGid) {//normal mode
 				self.vkUserList.selectedIndex = 1;
 				self.onUserChanged();
-			}		
+				
+				hideSpinner();
+				self.disableControls(0);
+				VkApiWrapper.welcomeCheck();
+			
+				return;
+			}
+			
+			//wall link mode
+			//try resolve provided ID
+			self.vkIdEdit.value = uidGid;
+			self.resolveUidGid(uidGid).always(function() {
+				hideSpinner();
+				self.disableControls(0);
+				VkApiWrapper.welcomeCheck();
+			});
 		}).fail(function() {
 			hideSpinner();
 			self.disableControls(1);
