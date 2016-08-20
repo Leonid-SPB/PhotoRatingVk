@@ -94,14 +94,13 @@ var RPApi = {
 			}
 		});
 		
-		
 		$.when(d0, d1, d2).done(function() {
 			var uidGid = getParameterByName("uidGid", true);
 			
+			self.vkUserList.selectedIndex = 1;
+			self.onUserChanged();
+			
 			if (!uidGid) {//normal mode
-				self.vkUserList.selectedIndex = 1;
-				self.onUserChanged();
-				
 				hideSpinner();
 				self.disableControls(0);
 				VkApiWrapper.welcomeCheck();
@@ -111,7 +110,6 @@ var RPApi = {
 			
 			//wall link mode
 			//try resolve provided ID
-			self.vkIdEdit.value = uidGid;
 			self.resolveUidGid(uidGid).always(function() {
 				hideSpinner();
 				self.disableControls(0);
@@ -308,6 +306,11 @@ var RPApi = {
 		function onFail() {
 			self.disableControls(0);
 			hideSpinner();
+		}
+		
+		if (!self.vkIdEdit.value) {
+			self.vkUserList.selectedIndex = 1;
+			self.onUserChanged();
 		}
 		
 		self.resolveUidGid(self.vkIdEdit.value).done(function (userGroup, isUser) {
