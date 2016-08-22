@@ -3,6 +3,7 @@
 */
 
 //requires jQuery, spin.js
+/* globals $, displayError, blinkDiv, Spinner, Settings, VK*/
 
 function getParameterByName(name, rfr) {
   name = name.replace(/[\[]/, "\\\[").replace(/[\]]/, "\\\]");
@@ -26,7 +27,7 @@ function displayError(eMsg, noteDivId, hideAfter) {
 
   if (hideAfter) {
     setTimeout(function () {
-      $("#" + noteDivId).empty()
+      $("#" + noteDivId).empty();
     }, hideAfter);
   }
 }
@@ -37,7 +38,7 @@ function displayWarn(eMsg, noteDivId, hideAfter) {
 
   if (hideAfter) {
     setTimeout(function () {
-      $("#" + noteDivId).empty()
+      $("#" + noteDivId).empty();
     }, hideAfter);
   }
 }
@@ -107,7 +108,6 @@ function blinkDiv(divId, blinks, delay) {
 
   toggleBlink($("#" + divId), blinks, delay);
 }
-
 
 var RateLimit = (function () {
   //by Matteo Agosti

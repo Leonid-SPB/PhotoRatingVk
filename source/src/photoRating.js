@@ -3,6 +3,7 @@
 */
 
 //requires VkApiWrapper, jQuery, highslide, spin.js
+/* globals $, displayError, blinkDiv, VkApiWrapper, VK, showSpinner, hideSpinner, getParameterByName*/
 
 var Settings = {
   VkAppLocation: "//vk.com/app3337781",
@@ -70,7 +71,7 @@ var RPApi = {
       user_ids: Settings.vkUserId,
       fields: "first_name,last_name,screen_name"
     }).done(function (me_) {
-      me = me_[0];
+      var me = me_[0];
       me.title = self.vkUserList.item(1).text;
       me.opt = self.vkUserList.item(1);
       me.opt.value = me.screen_name;

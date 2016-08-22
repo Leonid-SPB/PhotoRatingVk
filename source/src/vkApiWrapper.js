@@ -3,6 +3,7 @@
 */
 
 //requires jQuery, utils(RateLimit, displayError), Vk API
+/* globals $, RateLimit, displayError, blinkDiv, Settings, VK*/
 
 var VkApiWrapper = {
   //allowed: 3 requests in 1000 ms
@@ -43,7 +44,7 @@ var VkApiWrapper = {
     function scheduleVkApiMethod() {
       self.rateLimiter.schedule(function () {
         setTimeout(function () {
-          if (d.state() == "pending") {
+          if (d.state() === "pending") {
             if (retries-- > 0) {
               console.log("VkApiWrapper: VK.api call timeout, rescheduling request");
               timeout *= self.apiTmoutMultiplier;
@@ -59,7 +60,7 @@ var VkApiWrapper = {
 
         VK.api(vkApiMethod, methodParams, function (data) {
           //don't resolve/reject again on duplicate request
-          if (d.state() != "pending") {
+          if (d.state() !== "pending") {
             return;
           }
 
@@ -188,7 +189,7 @@ var VkApiWrapper = {
     var p = self.callVkApi("utils.resolveScreenName", options);
     if (!silent) {
       p.fail(function () {
-        var str = screen_name in options ? screen_name : 'undefined';
+        var str = ("screen_name" in options) ? options.screen_name : 'undefined';
         self.displayError("Не удалось получить информацию о пользователе/группе: '" + str + "'");
       });
     }
@@ -234,6 +235,7 @@ var VkApiWrapper = {
 
   rateRequest: function (delay) {
     var isRatedKey = "isRated3";
+    var BlinkAfterDialogDelay = 1500;
 
     setTimeout(function () {
       VkApiWrapper.storageGet(isRatedKey).done(function (data) {
@@ -246,8 +248,8 @@ var VkApiWrapper = {
         VkApiWrapper.storageSet(isRatedKey, "1");
 
         setTimeout(function () {
-          blinkDiv("vk_like", Settings.blinkCount, Settings.blinkDelay);
-        }, 1500);
+          blinkDiv("vk_like", Settings.BlinkCount, Settings.BlinkDelay);
+        }, BlinkAfterDialogDelay);
       });
     }, delay);
   }

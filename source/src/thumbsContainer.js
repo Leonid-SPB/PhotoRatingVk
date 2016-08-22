@@ -5,6 +5,8 @@
 /* Thumbs Container
 requires: jQuery, highslide
  */
+/* globals $, hs*/
+
 (function ($, hs) {
   var defaults = {
     AddThumbDelay: 250,
@@ -33,10 +35,10 @@ requires: jQuery, highslide
       $this.data('ThumbsViewer', data);
       $this.addClass("ThumbsViewer-thumbs_container");
       $this.on("click.ThumbsViewer", ".ThumbsViewer-thumb_block", function (event) {
-        thC.onThumbClick.call(this, event, $this)
+        thC.onThumbClick.call(this, event, $this);
       });
       $this.on("click.ThumbsViewer", ".ThumbsViewer_zoom-ico", function (event) {
-        thC.onZoomClick.call(this, event, $this)
+        thC.onZoomClick.call(this, event, $this);
       });
     },
 
@@ -109,7 +111,6 @@ requires: jQuery, highslide
       var $this = $(this);
       var $data = $this.data('ThumbsViewer');
       var d = $.Deferred();
-
 
       function addThumb__(queue) {
         if (!queue.length || $data.abortTask__) {
@@ -261,7 +262,7 @@ requires: jQuery, highslide
       var thumbData = [];
 
       this.find(".ThumbsViewer-thumb_block.selected").each(function () {
-        $this = $(this);
+        var $this = $(this);
         var $data = $this.data('ThumbsViewer');
         $data.$thumb = $this;
         thumbData.push($data);
@@ -376,7 +377,6 @@ requires: jQuery, highslide
       return false;
     }
   };
-
 
   $.fn.ThumbsViewer = function (method) {
     var args = arguments;
