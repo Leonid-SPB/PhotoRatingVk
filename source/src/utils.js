@@ -43,40 +43,28 @@ function displayWarn(eMsg, noteDivId, hideAfter) {
   }
 }
 
-$.fn.spin = function (opts) {
-  this.each(function () {
-    var $this = $(this),
-      data = $this.data();
-
-    if ((opts === false) && (data.spinner)) {
-      data.spinner.stop();
-      delete data.spinner;
-    } else if ((!data.spinner) && (opts !== false)) {
-      data.spinner = new Spinner($.extend({
-        color: $this.css('color')
-      }, opts)).spin(this);
-    }
-  });
-  return this;
-};
-
 function showSpinner() {
   var opts = {
     lines: 17,
     length: 26,
     width: 11,
     radius: 40,
+    scale: 2.0,
     corners: 1,
-    rotate: 0,
     color: '#000',
-    speed: 0.9,
+    opacity: 1 / 4,
+    rotate: 0,
+    direction: 1,
+    speed: 0.7,
     trail: 64,
+    fps: 20,
+    zIndex: 2e9,
+    className: 'spinner',
+    top: '50%',
+    left: '50%',
     shadow: false,
     hwaccel: false,
-    className: 'spinner',
-    zIndex: 2e9,
-    top: 'auto',
-    left: 'auto'
+    position: 'absolute'
   };
   $("body").spin(opts);
 }

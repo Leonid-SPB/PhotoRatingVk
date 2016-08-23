@@ -339,10 +339,10 @@ requires: jQuery, highslide
       var origUrl = "//vk.com/photo" + vk_img.owner_id + "_" + vk_img.id;
       var onClickOrigUrl = "var myWindow = window.open('" + origUrl + "', 'vk_photo', '" + $data.VkPhotoPopupSettings + "', false); myWindow.focus();";
       var caption = '\
-				<div>\
-					<div class="highslide-caption-divinfo" style="text-align: left"><b>Альбом</b>:<i> %1</i></div><div class="highslide-caption-divinfo" style="text-align: right"><a onclick="%2">Оригинал фото</a></div>\
-				</div>\
-				<div class="highslide-caption-descr">%3</div>';
+        <div>\
+          <div class="highslide-caption-divinfo" style="text-align: left"><b>Альбом</b>:<i> %1</i></div><div class="highslide-caption-divinfo" style="text-align: right"><a onclick="%2">Оригинал фото</a></div>\
+        </div>\
+        <div class="highslide-caption-descr">%3</div>';
 
       caption = caption.replace("%1", album);
       caption = caption.replace("%2", onClickOrigUrl);

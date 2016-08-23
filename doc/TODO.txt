@@ -7,14 +7,14 @@ pending:
 ) test on all modern browsers: chrome, firefox, edge, ie
 ) donate button (disable ads)
 
-) create new VK application for intermediate release
 ) refactoring/cleanup (clean global namespace)
 ) style tuning: better loadding gif, fonts, etc...
 ) update wiki page and tutorial for new users
 ) video "how to use"
-) add tooltips?
+) refresh welcome dialog, add tooltips?
 
 done:
+x) create new VK application for intermediate release
 x) query self screen name
 x) smart gid/uid search, resolve title by guid/uid and add to list
 x) fix error with album access (ignore inaccessible albums)
