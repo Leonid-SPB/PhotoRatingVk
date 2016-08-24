@@ -3,17 +3,18 @@ pending:
 ) improve gallery navigation buttons
 ) share link button: https://new.vk.com/app3217496_105876?uidGid=334884
 
-) new Jquery
 ) test on all modern browsers: chrome, firefox, edge, ie
-) donate button (disable ads)
 
-) refactoring/cleanup (clean global namespace)
-) style tuning: better loadding gif, fonts, etc...
 ) update wiki page and tutorial for new users
-) video "how to use"
 ) refresh welcome dialog, add tooltips?
+) refactoring/cleanup (clean global namespace)
+
+) video "how to use"
+) donate button (disable ads)
+) style tuning: better loadding gif, fonts, etc...
 
 done:
+x) new Jquery
 x) create new VK application for intermediate release
 x) query self screen name
 x) smart gid/uid search, resolve title by guid/uid and add to list

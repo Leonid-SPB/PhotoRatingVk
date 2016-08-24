@@ -10,7 +10,7 @@ var VkApiWrapper = {
   apiMaxCallsCount: 3,
   apiMaxCallsPeriod: 1000,
   apiCallTimeout: 2000,
-  errorHideAfter: 3000,
+  errorHideAfter: 6000,
   apiCallMaxRetries: 4,
   apiTmoutMultiplier: 2.0,
   ApiErrCodes: {
@@ -224,7 +224,7 @@ var VkApiWrapper = {
     var isWelcomedKey = "isWelcomed3";
     VkApiWrapper.storageGet(isWelcomedKey).done(function (data) {
       if (data == "1") { //already welcomed
-        return;
+        //return;
       }
 
       //if not welcomed yet -> show welcome dialog
@@ -240,7 +240,7 @@ var VkApiWrapper = {
     setTimeout(function () {
       VkApiWrapper.storageGet(isRatedKey).done(function (data) {
         if (data == "1") { //already rated
-          return;
+          //return;
         }
 
         //if not rated yet -> show rate us dialog

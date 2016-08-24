@@ -12,10 +12,10 @@ var Settings = {
   VkApiCallTimeout: 2000,
   VkApiCallMaxRetries: 4,
   GetPhotosChunksSz: 100,
-  ErrorHideAfter: 3000,
-  MaxRatedPhotos: 1000,
+  ErrorHideAfter: 6000,
+  MaxRatedPhotos: 500,
   MaxTotalPhotos: 1000000,
-  RateRequestDelay: 3000,
+  RateRequestDelay: 6000,
   BlinkDelay: 500,
   BlinkCount: 12,
   RedirectDelay: 3000,
@@ -613,6 +613,11 @@ $(function () {
   $("#goButton").button("enable");
   $("#welcome_dialog").dialog({
     autoOpen: false,
+    show: {
+      effect: "explode",
+      duration: 2000
+    },
+    hide: true,
     modal: true,
     width: 550,
     position: {
@@ -623,6 +628,8 @@ $(function () {
   });
   $("#rateus_dialog").dialog({
     autoOpen: false,
+    show: "highlight",
+    hide: true,
     modal: false
   });
   $("#RatingThreshold").spinner({
