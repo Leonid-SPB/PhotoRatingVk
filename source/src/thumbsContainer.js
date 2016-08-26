@@ -9,7 +9,10 @@ requires: jQuery, highslide
 
 (function ($, hs) {
   var defaults = {
-    AddThumbDelay: 250,
+    AddThumbDelay: 30,
+    AddThumbCount: 20,
+    LoadThumbDelay: 250,
+
     VkPhotoPopupSettings: 'toolbar=yes,scrollbars=yes,resizable=yes,width=1024,height=600'
   };
 
@@ -26,7 +29,6 @@ requires: jQuery, highslide
         //private
         busy_dfrd__: $.Deferred(),
         abortTask__: false,
-        thumbsQueue: [],
         thumbsSelCnt__: 0
       };
       data.busy_dfrd__.resolve();
@@ -48,21 +50,9 @@ requires: jQuery, highslide
       var $data = $(this).data('ThumbsViewer');
       var thumb_parent = $("<div class='ThumbsViewer-thumb_block loading' />");
 
-      function getSelSizeUrl(vk_img, szLiterPref, szLiterAlt) {
-        var src_alt = vk_img.sizes[0].src;
-        for (var i = 0; i < vk_img.sizes.length; ++i) {
-          if (vk_img.sizes[i].type == szLiterPref) {
-            return vk_img.sizes[i].src;
-          } else if (vk_img.sizes[i].type == szLiterAlt) {
-            src_alt = vk_img.sizes[i].src;
-          }
-        }
-        return src_alt;
-      }
-
       var titleStr = thC.makeTitle.call(this, vk_img);
       var captionStr = thC.makeCaption.call(this, vk_img);
-      var zoomImgSrc = getSelSizeUrl(vk_img, 'y', 'x');
+      var zoomImgSrc = thC.getSelSizeUrl(vk_img, 'y', 'x');
       var aa = $("<a />", {
         class: 'ThumbsViewer-hslink',
         href: zoomImgSrc,
@@ -74,20 +64,8 @@ requires: jQuery, highslide
       });
       var zoomIcon = $('<div class="ThumbsViewer_zoom-ico" />').append(aa);
 
-      var imgSrc = getSelSizeUrl(vk_img, 'p', 'm');
-      var thumb_img = $("<img />");
-      thumb_img.on('load', function () {
-        thumb_parent.removeClass('loading');
-        thumb_parent.addClass('showphoto');
-        thumb_parent.css('background-image', 'url(' + imgSrc + ')');
-        thumb_img.on('load', null);
-      });
-      thumb_img.attr({
-        src: imgSrc,
-        title: "Открыть фото"
-      });
-
       thumb_parent.append(zoomIcon);
+      thumb_parent.attr("title", "Открыть оригинал фото");
       thumb_parent.data('ThumbsViewer', {
         vk_img: vk_img
       });
@@ -104,6 +82,42 @@ requires: jQuery, highslide
       $thumb.remove();
     },
 
+    loadImages: function () {
+      var $this = $(this);
+      var $data = $(this).data('ThumbsViewer');
+
+      var loadImgQueue = $this.find(".ThumbsViewer-thumb_block.loading").toArray();
+
+      function loadImg__() {
+        if ($data.abortTask__ || !loadImgQueue.length) {
+          $data.busy_dfrd__.resolve();
+          return;
+        }
+
+        var thumb = $(loadImgQueue.shift());
+        if (!$.contains(document, thumb[0])) { //don't load image if element has already been removed
+          return loadImg__();
+        }
+
+        var vk_img = thumb.data('ThumbsViewer').vk_img;
+        var imgSrc = thC.getSelSizeUrl(vk_img, 'p', 'm');
+        var thumb_img = $("<img />");
+        thumb_img.on('load', function () {
+          thumb.removeClass('loading');
+          thumb.addClass('showphoto');
+          thumb.css('background-image', 'url(' + imgSrc + ')');
+          thumb_img.on('load', null);
+        });
+        thumb_img.attr("src", imgSrc);
+
+        setTimeout(function () {
+          loadImg__();
+        }, $data.LoadThumbDelay);
+      }
+
+      loadImg__();
+    },
+
     ///thumbsAr is expected to be non empty array with elements containing .src property
     ///returns Deferred which will be resolved when all thumbs are added to container or job is aborted
     addThumbList: function (thumbsAr) {
@@ -113,13 +127,13 @@ requires: jQuery, highslide
       var d = $.Deferred();
 
       function addThumb__(queue) {
-        if (!queue.length || $data.abortTask__) {
-          $data.busy_dfrd__.resolve();
-          d.resolve();
-          return;
+        for (var i = 0; i < $data.AddThumbCount; ++i) {
+          if (!queue.length) {
+            d.resolve();
+            return;
+          }
+          thC.createThumb.call(self, queue.shift());
         }
-
-        thC.createThumb.call(self, queue.shift());
         setTimeout(function () {
           addThumb__(queue);
         }, $data.AddThumbDelay);
@@ -130,10 +144,14 @@ requires: jQuery, highslide
 
       //when prev job aborted, start new job
       $.when($data.busy_dfrd__).done(function () {
-        $data.thumbsQueue = $data.thumbsQueue.concat(thumbsAr);
         $data.busy_dfrd__ = $.Deferred();
         $data.abortTask__ = false;
-        addThumb__($data.thumbsQueue);
+        addThumb__(thumbsAr.slice());
+      });
+
+      //start loading images when all thumbnais are added to container
+      d.done(function () {
+        thC.loadImages.call(self);
       });
 
       return d.promise();
@@ -293,7 +311,6 @@ requires: jQuery, highslide
         $this.empty();
         $data.thumbsSelCnt__ = 0;
         $data.albumMap = {};
-        $data.thumbsQueue = [];
         d.resolve();
       });
 
@@ -302,13 +319,9 @@ requires: jQuery, highslide
 
     ///reorder thumbnails in container (straight/reverse)
     reorder: function (revSort) {
+      var self = this;
       var $this = $(this);
       var $data = $this.data('ThumbsViewer');
-
-      //if busy, reverse image queue
-      if ($data.busy_dfrd__.state() != "resolved") {
-        console.log("Thumbs Container: reverse while adding new images!");
-      }
 
       //if sort order changed, resort thumbs
       if ($data.revSortOrder != revSort) {
@@ -320,8 +333,12 @@ requires: jQuery, highslide
         for (var i = 0; i < thumbsLi.length; ++i) {
           $this.append(thumbsLi[i]);
         }
+
+        thC.loadImages.call(self);
       }
     },
+
+    //shuffle - reorder randomly
 
     makeTitle: function (vk_img) {
       return 'Фото %1/%2:&nbsp; &#10084; ' + vk_img.likes.count;
@@ -349,6 +366,18 @@ requires: jQuery, highslide
       caption = caption.replace("%3", vk_img.text);
 
       return caption;
+    },
+
+    getSelSizeUrl: function (vk_img, szLiterPref, szLiterAlt) {
+      var src_alt = vk_img.sizes[0].src;
+      for (var i = 0; i < vk_img.sizes.length; ++i) {
+        if (vk_img.sizes[i].type == szLiterPref) {
+          return vk_img.sizes[i].src;
+        } else if (vk_img.sizes[i].type == szLiterAlt) {
+          src_alt = vk_img.sizes[i].src;
+        }
+      }
+      return src_alt;
     },
 
     ///createThumb() calls this function modify $thumb object before insertion to the container

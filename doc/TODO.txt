@@ -1,12 +1,11 @@
 pending:
-) improve gallery support while thumbs are loadding
 ) improve gallery navigation buttons
 ) share link button: https://new.vk.com/app3217496_105876?uidGid=334884
 
 ) test on all modern browsers: chrome, firefox, edge, ie
 
 ) update wiki page and tutorial for new users
-) refresh welcome dialog, add tooltips?
+) improve welcome dialog (link to help page), add tooltips?
 ) refactoring/cleanup (clean global namespace)
 
 ) video "how to use"
@@ -14,6 +13,7 @@ pending:
 ) style tuning: better loadding gif, fonts, etc...
 
 done:
+x) improve gallery support while thumbs are loadding
 x) new Jquery
 x) create new VK application for intermediate release
 x) query self screen name

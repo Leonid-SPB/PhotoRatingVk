@@ -27,7 +27,9 @@ var Settings = {
   likedThresh: 1,
 
   VkPhotoPopupSettings: 'toolbar=yes,scrollbars=yes,resizable=yes,width=1024,height=600',
-  AddThumbDelay: 250
+  AddThumbDelay: 30,
+  AddThumbCount: 20,
+  LoadThumbDelay: 250
 };
 
 function showInviteBox() {
@@ -64,8 +66,14 @@ var RPApi = {
     self.$chosenPhotosSpan = $("#chosenPhotosNum");
     self.$ratingThreshSpin = $("#RatingThreshold");
 
-    self.disableControls(1);
-    showSpinner();
+    var initDone = false;
+
+    VkApiWrapper.welcomeCheck().done(function () {
+      if (!initDone) {
+        self.disableControls(1);
+        showSpinner();
+      }
+    });
 
     var d0 = VkApiWrapper.queryUser({
       user_ids: Settings.vkUserId,
@@ -113,19 +121,18 @@ var RPApi = {
       self.onUserChanged();
 
       if (!uidGid) { //normal mode
+        initDone = true;
         hideSpinner();
         self.disableControls(0);
-        VkApiWrapper.welcomeCheck();
-
         return;
       }
 
       //wall link mode
       //try resolve provided ID
       self.resolveUidGid(uidGid).always(function () {
+        initDone = true;
         hideSpinner();
         self.disableControls(0);
-        VkApiWrapper.welcomeCheck();
       });
     }).fail(function () {
       hideSpinner();
@@ -373,14 +380,15 @@ var RPApi = {
 
           self.queryAlbumsInfo(ownerId, self.ratedPhotos).done(function () {
             self.$progressBar.progressbar("value", 100);
-            hideSpinner();
             $("#thumbs_container").ThumbsViewer("updateAlbumMap", self.albumMap);
-            $("#thumbs_container").ThumbsViewer("addThumbList", self.ratedPhotos);
-            self.disableControls(0);
+            $("#thumbs_container").ThumbsViewer("addThumbList", self.ratedPhotos).done(function () {
+              hideSpinner();
+              self.disableControls(0);
 
-            if (self.ratedPhotos.length > 10) {
-              VkApiWrapper.rateRequest(Settings.RateRequestDelay);
-            }
+              if (self.ratedPhotos.length > 10) {
+                VkApiWrapper.rateRequest(Settings.RateRequestDelay);
+              }
+            }).fail(onFail);
           }).fail(onFail);
         }).fail(onFail);
       }).fail(onFail);
@@ -603,6 +611,8 @@ $(function () {
 
   $("#thumbs_container").ThumbsViewer({
     AddThumbDelay: Settings.AddThumbDelay,
+    AddThumbCount: Settings.AddThumbCount,
+    LoadThumbDelay: Settings.LoadThumbDelay,
     VkPhotoPopupSettings: Settings.VkPhotoPopupSettings,
     disableSel: true
   });
@@ -615,7 +625,7 @@ $(function () {
     autoOpen: false,
     show: {
       effect: "explode",
-      duration: 2000
+      duration: 1500
     },
     hide: true,
     modal: true,
@@ -628,7 +638,10 @@ $(function () {
   });
   $("#rateus_dialog").dialog({
     autoOpen: false,
-    show: "highlight",
+    show: {
+      effect: "highlight",
+      duration: 1500
+    },
     hide: true,
     modal: false
   });

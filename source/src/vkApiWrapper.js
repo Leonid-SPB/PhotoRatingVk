@@ -13,6 +13,7 @@ var VkApiWrapper = {
   errorHideAfter: 6000,
   apiCallMaxRetries: 4,
   apiTmoutMultiplier: 2.0,
+
   ApiErrCodes: {
     AccessDenied: 15,
     AlbumAccessDenied: 200
@@ -220,17 +221,24 @@ var VkApiWrapper = {
   },
 
   welcomeCheck: function () {
+    var d = $.Deferred();
+
     //request isWelcomed var
     var isWelcomedKey = "isWelcomed3";
     VkApiWrapper.storageGet(isWelcomedKey).done(function (data) {
       if (data == "1") { //already welcomed
+        //d.resolve();
         //return;
       }
 
       //if not welcomed yet -> show welcome dialog
-      $("#welcome_dialog").dialog("open");
+      $("#welcome_dialog").dialog("open").on("dialogclose", function (event, ui) {
+        d.resolve();
+      });
       VkApiWrapper.storageSet(isWelcomedKey, "1");
     });
+
+    return d.promise();
   },
 
   rateRequest: function (delay) {
