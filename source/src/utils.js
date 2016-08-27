@@ -51,7 +51,7 @@ function showSpinner() {
     radius: 40,
     scale: 2.0,
     corners: 1,
-    color: '#000',
+    color: "rgb(42, 88, 133)",
     opacity: 1 / 4,
     rotate: 0,
     direction: 1,

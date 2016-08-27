@@ -624,27 +624,33 @@ $(function () {
   $("#welcome_dialog").dialog({
     autoOpen: false,
     show: {
-      effect: "explode",
+      effect: "fade",
       duration: 1500
     },
     hide: true,
-    modal: true,
+    modal: false,
     width: 550,
     position: {
       my: "center center-150",
       at: "center center",
       of: window
     }
-  });
+  }).parent().addClass("glow");
   $("#rateus_dialog").dialog({
     autoOpen: false,
     show: {
-      effect: "highlight",
+      effect: "fade",
       duration: 1500
     },
     hide: true,
+    width: 550,
+    position: {
+      my: "center center-150",
+      at: "center center",
+      of: window
+    },
     modal: false
-  });
+  }).parent().addClass("glow");
   $("#RatingThreshold").spinner({
     min: 1,
     step: 1,

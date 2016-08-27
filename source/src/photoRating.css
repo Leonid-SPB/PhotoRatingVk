@@ -89,6 +89,12 @@ a:hover {
   overflow: hidden;
 }
 
+.glow {
+  -webkit-box-shadow: 0px 0px 80px 20px rgba(89, 112, 135, 1);
+  -moz-box-shadow: 0px 0px 80px 20px rgba(89, 112, 135, 1);
+  box-shadow: 0px 0px 80px 20px rgba(89, 112, 135, 1);
+}
+
 
 /* Thumbs Container */
 
@@ -109,7 +115,7 @@ a:hover {
 }
 
 .ThumbsViewer-thumb_block.loading {
-  background-image: url(graphics/loader.big.white.gif);
+  /*background-image: url(graphics/loader.big.white.gif);*/
   background-size: 64px 64px;
   background-repeat: no-repeat;
   background-position: center;

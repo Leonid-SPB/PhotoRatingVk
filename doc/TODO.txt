@@ -1,12 +1,14 @@
 pending:
-) improve gallery navigation buttons
+) filter photos when likes threshold changes
+) filter user input, drop tags
 ) share link button: https://new.vk.com/app3217496_105876?uidGid=334884
+) refactoring/cleanup (clean global namespace)
 
 ) test on all modern browsers: chrome, firefox, edge, ie
 
 ) update wiki page and tutorial for new users
 ) improve welcome dialog (link to help page), add tooltips?
-) refactoring/cleanup (clean global namespace)
+
 
 ) video "how to use"
 ) donate button (disable ads)
@@ -32,6 +34,7 @@ x) minimal canvas size for photo
 
 no go:
 ) use "enter" to start
+) improve gallery navigation buttons
 ) click anywhere to close preview
 ) filter by album?
 ) click on image to open gallery, click on "zoom" icon to open original photo
