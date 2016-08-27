@@ -1,9 +1,9 @@
 pending:
-) filter photos when likes threshold changes
 ) filter user input, drop tags
 ) share link button: https://new.vk.com/app3217496_105876?uidGid=334884
 ) refactoring/cleanup (clean global namespace)
 
+) filter photos when likes threshold changes
 ) test on all modern browsers: chrome, firefox, edge, ie
 
 ) update wiki page and tutorial for new users

@@ -3,7 +3,7 @@
 */
 
 //requires jQuery, spin.js
-/* globals $, displayError, blinkDiv, Spinner, Settings, VK*/
+/* globals $, displayError, blinkDiv, Spinner, Settings, VK, html_sanitize*/
 
 function getParameterByName(name, rfr) {
   name = name.replace(/[\[]/, "\\\[").replace(/[\]]/, "\\\]");
@@ -41,6 +41,18 @@ function displayWarn(eMsg, noteDivId, hideAfter) {
       $("#" + noteDivId).empty();
     }, hideAfter);
   }
+}
+
+function sanitizeHtml(str) {
+  //fixme using real sanitizer, meanwhile assume nothing harmful could fit into 16 characters
+  return str.slice(0, 16);
+  /*var urlTransformer, nameIdClassTransformer;
+
+  // customize if you need to filter URLs and/or ids/names/classes
+  urlTransformer = nameIdClassTransformer = function (s) {
+    return s;
+  };
+  return html_sanitize(str, urlTransformer, nameIdClassTransformer);*/
 }
 
 function showSpinner() {

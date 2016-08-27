@@ -163,12 +163,12 @@ a:hover {
   filter: saturate(2) brightness(1.1) opacity(1);
 }
 
-.weclome_p {
+.welcome_p {
   color: #252054;
   direction: ltr;
   font-family: tahoma, arial, verdana, sans-serif, Lucida Sans;
   font-size: 12px;
-  font-weight: normal;
+  font-weight: 500;
 }
 
 .blink_1 {

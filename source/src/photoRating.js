@@ -3,7 +3,7 @@
 */
 
 //requires VkApiWrapper, jQuery, highslide, spin.js
-/* globals $, displayError, blinkDiv, VkApiWrapper, VK, showSpinner, hideSpinner, getParameterByName*/
+/* globals $, displayError, blinkDiv, VkApiWrapper, VK, showSpinner, hideSpinner, getParameterByName, sanitizeHtml*/
 
 var Settings = {
   VkAppLocation: "//vk.com/app3337781",
@@ -21,6 +21,8 @@ var Settings = {
   RedirectDelay: 3000,
   MaxGroupNameLen: 40,
   MaxFriendsList: 500,
+  MaxLikeThresh: 200,
+  RatingRefreshDelay: 700,
 
   vkUserId: null,
   vkSid: null,
@@ -65,6 +67,10 @@ var RPApi = {
     self.$ratedPhotosSpan = $("#ratedPhotosNum");
     self.$chosenPhotosSpan = $("#chosenPhotosNum");
     self.$ratingThreshSpin = $("#RatingThreshold");
+
+    self.$ratingThreshSpin.on("spinchange", function (event, ui) {
+      RPApi.onThreshSpinChange.call(self);
+    });
 
     var initDone = false;
 
@@ -115,7 +121,7 @@ var RPApi = {
     });
 
     $.when(d0, d1, d2).done(function () {
-      var uidGid = getParameterByName("uidGid", true);
+      var uidGid = sanitizeHtml(getParameterByName("uidGid", true));
 
       self.vkUserList.selectedIndex = 1;
       self.onUserChanged();
@@ -153,6 +159,17 @@ var RPApi = {
   onUidGidChanged: function () {
     this.vkUserList.selectedIndex = 0;
     this.vkGroupList.selectedIndex = 0;
+  },
+
+  onThreshSpinChange: function () {
+    var self = this;
+    Settings.likedThresh = +self.$ratingThreshSpin.spinner("value");
+
+    function refreshRating() {
+
+    }
+
+    //RatingRefreshDelay
   },
 
   disableControls: function (disable) {
@@ -654,7 +671,7 @@ $(function () {
   $("#RatingThreshold").spinner({
     min: 1,
     step: 1,
-    max: 100
+    max: Settings.MaxLikeThresh
   });
 
   showSpinner();
