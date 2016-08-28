@@ -168,8 +168,8 @@ a:hover {
 .welcome_p {
   color: #252054;
   direction: ltr;
-  font-family: tahoma, arial, verdana, sans-serif, Lucida Sans;
-  font-size: 12px;
+  font-family: Georgia, Times, "Times New Roman", serif;
+  font-size: 1.16em;
   font-weight: 500;
 }
 

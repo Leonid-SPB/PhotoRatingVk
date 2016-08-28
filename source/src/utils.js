@@ -46,7 +46,7 @@ function displayWarn(eMsg, noteDivId, hideAfter) {
 function sanitizeHtml(str) {
   //fixme using real sanitizer, meanwhile assume nothing harmful could fit into 16 characters
   if (str) {
-    return str.toString().slice(0, 16);
+    return str.toString().slice(0, 20);
   } else {
     return "";
   }

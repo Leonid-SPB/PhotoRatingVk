@@ -1,8 +1,6 @@
 pending:
-) share link button: https://new.vk.com/app3217496_105876?uidGid=334884
-) refactoring/cleanup (clean global namespace)
-
 ) filter photos when likes threshold changes
+) refactoring/cleanup (clean global namespace)
 
 ) update wiki page and tutorial for new users
 ) improve welcome dialog (link to help page), add tooltips?
@@ -14,6 +12,7 @@ pending:
 ) filter user input, drop tags (not really necessary)
 
 done:
+x) share link button: https://new.vk.com/app3217496_105876?uidGid=334884
 x) improve gallery support while thumbs are loadding
 x) new Jquery
 x) create new VK application for intermediate release

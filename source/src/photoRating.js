@@ -368,7 +368,7 @@ var RPApi = {
       return;
     }
 
-    var attachments = /*"photo-45558877_428286179," + */Settings.VkAppLocation + "?uidGid=" + self.vkIdEdit.value;
+    var attachments = /*"photo-45558877_428286179," + */ Settings.VkAppLocation + "?uidGid=" + self.vkIdEdit.value;
     var guid = "app3217496-" + self.vkIdEdit.value;
 
     VkApiWrapper.wallPost({
@@ -399,7 +399,7 @@ var RPApi = {
     self.photosFilteredCnt = 0;
     Settings.likedThresh = +self.$ratingThreshSpin.spinner("value");
     self.busyFlag = true;
-    
+
     if (!noSpinner)
       showSpinner();
 
@@ -707,7 +707,7 @@ $(function () {
     },
     hide: true,
     modal: false,
-    width: 550,
+    width: 600,
     position: {
       my: "center center-150",
       at: "center center",
@@ -721,7 +721,7 @@ $(function () {
       duration: 1500
     },
     hide: true,
-    width: 550,
+    width: 600,
     position: {
       my: "center center-150",
       at: "center center",
