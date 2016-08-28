@@ -209,9 +209,26 @@ var VkApiWrapper = {
   },
 
   storageGet: function (keys) {
-    return this.callVkApi("storage.get", {
+    var d = $.Deferred();
+
+    this.callVkApi("storage.get", {
       keys: keys
+    }).fail(function (error) {
+      d.reject();
+    }).done(function (resp) {
+      var myresp = {};
+
+      for (var i = 0; i < keys.length; ++i) {
+        myresp[keys[i]] = "";
+      }
+
+      for (var i = 0; i < resp.length; ++i) {
+        myresp[resp[i].key] = resp[i].value;
+      }
+      d.resolve(myresp);
     });
+
+    return d.promise();
   },
 
   storageSet: function (key, value) {
