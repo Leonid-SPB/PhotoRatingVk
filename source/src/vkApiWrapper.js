@@ -260,7 +260,7 @@ var VkApiWrapper = {
     setTimeout(function () {
       VkApiWrapper.storageGet(isWelcomedKey + "," + isRatedKey).done(function (data) {
         if ((data[isWelcomedKey] == "0") || (data[isRatedKey] == "1")) { //already rated or first run
-          //return;
+          return;
         }
 
         //if not rated yet -> show rate us dialog

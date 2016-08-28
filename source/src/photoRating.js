@@ -49,6 +49,7 @@ var RPApi = {
   $ratingThreshSpin: null,
 
   busyFlag: true,
+  refreshTmoutId: null,
   ownerId: 0,
   friendMap: [],
   groupMap: [],
@@ -73,7 +74,7 @@ var RPApi = {
     self.$chosenPhotosSpan = $("#chosenPhotosNum");
     self.$ratingThreshSpin = $("#RatingThreshold");
 
-    self.$ratingThreshSpin.on("spinchange", function (event, ui) {
+    self.$ratingThreshSpin.on("spin", function (event, ui) {
       RPApi.onThreshSpinChange.call(self);
     });
 
@@ -177,10 +178,28 @@ var RPApi = {
     Settings.likedThresh = +self.$ratingThreshSpin.spinner("value");
 
     function refreshRating() {
+      self.refreshTmoutId = null;
+      if (!self.ratedPhotos.length) {
+        return;
+      }
 
+      var photos = self.filterPhotos(self.ratedPhotos, Settings.likedThresh);
+      if (!photos.length) {
+        Settings.likedThresh = self.ratedPhotos[0].likes.count;
+        photos = self.filterPhotos(self.ratedPhotos, Settings.likedThresh);
+        self.$ratingThreshSpin.spinner("value", Settings.likedThresh);
+      }
+      self.$chosenPhotosSpan.text(photos.length);
+      $("#thumbs_container").ThumbsViewer("empty");
+      $("#thumbs_container").ThumbsViewer("updateAlbumMap", self.albumMap);
+      $("#thumbs_container").ThumbsViewer("addThumbList", photos);
     }
 
-    //RatingRefreshDelay
+    if (self.refreshTmoutId) {
+      clearTimeout(self.refreshTmoutId);
+    }
+
+    self.refreshTmoutId = setTimeout(refreshRating, Settings.RatingRefreshDelay);
   },
 
   disableControls: function (disable) {
@@ -441,15 +460,15 @@ var RPApi = {
 
         $.when(d1, d2, d3, d4).done(function () {
           self.ratedPhotos = self.sortPhotosByRating(self.ratedPhotos);
+          self.$ratedPhotosSpan.text(self.ratedPhotos.length);
           if (self.ratedPhotos.length > Settings.MaxRatedPhotos) {
             self.ratedPhotos = self.ratedPhotos.slice(0, Settings.MaxRatedPhotos);
           }
-          self.$chosenPhotosSpan.text(self.ratedPhotos.length);
 
           if (!self.ratedPhotos.length) { //no photos found
             self.busyFlag = false;
             hideSpinner();
-            self.displayError("Не удалось составить рейтинг! Не найдено фотографий, с рейтингом выше " + Settings.likedThresh, Settings.ErrorHideAfter);
+            self.displayError("Не удалось составить рейтинг! Не найдено фотографий, с рейтингом выше 1", Settings.ErrorHideAfter);
             self.disableControls(0);
             return;
           }
@@ -457,12 +476,21 @@ var RPApi = {
           self.queryAlbumsInfo(ownerId, self.ratedPhotos).done(function () {
             self.$progressBar.progressbar("value", 100);
             $("#thumbs_container").ThumbsViewer("updateAlbumMap", self.albumMap);
-            $("#thumbs_container").ThumbsViewer("addThumbList", self.ratedPhotos).done(function () {
+
+            var photos = self.filterPhotos(self.ratedPhotos, Settings.likedThresh);
+
+            if (!photos.length) {
+              Settings.likedThresh = self.ratedPhotos[0].likes.count;
+              photos = self.filterPhotos(self.ratedPhotos, Settings.likedThresh);
+              self.$ratingThreshSpin.spinner("value", Settings.likedThresh);
+            }
+            self.$chosenPhotosSpan.text(photos.length);
+            $("#thumbs_container").ThumbsViewer("addThumbList", photos).done(function () {
               self.busyFlag = false;
               hideSpinner();
               self.disableControls(0);
 
-              if (self.ratedPhotos.length > 10) {
+              if (photos.length > 10) {
                 VkApiWrapper.rateRequest(Settings.RateRequestDelay);
                 $("#goButton").button("option", "label", self.goBtnLabelSave);
               }
@@ -583,7 +611,7 @@ var RPApi = {
             response.items = [];
           }
 
-          var photosFiltered = self.filterPhotos(response.items, Settings.likedThresh);
+          var photosFiltered = self.filterPhotos(response.items, 1);
           photos = photos.concat(photosFiltered);
 
           ddd.notify(response.items.length, photosFiltered.length);
@@ -625,7 +653,7 @@ var RPApi = {
             response.items = [];
           }
 
-          var photosFiltered = self.filterPhotos(response.items, Settings.likedThresh);
+          var photosFiltered = self.filterPhotos(response.items, 1);
           photos = photos.concat(photosFiltered);
 
           ddd.notify(response.items.length, photosFiltered.length);

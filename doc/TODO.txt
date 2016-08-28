@@ -1,5 +1,4 @@
 pending:
-) filter photos when likes threshold changes
 ) refactoring/cleanup (clean global namespace)
 
 ) update wiki page and tutorial for new users
@@ -12,6 +11,7 @@ pending:
 ) filter user input, drop tags (not really necessary)
 
 done:
+x) filter photos when likes threshold changes
 x) share link button: https://new.vk.com/app3217496_105876?uidGid=334884
 x) improve gallery support while thumbs are loadding
 x) new Jquery
