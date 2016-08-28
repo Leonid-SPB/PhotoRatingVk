@@ -81,14 +81,14 @@
 
     <div style="width: 100%; margin-top: 10px" class="clear_fix">
       <div style="float: left;">
-        <button id="goButton" disabled=1 type="button" onclick="RPApi.onGoButton();">Рейтинг</button>
+        <button id="goButton" disabled=1 type="button" onclick="RPApi.onGoButton();">Рейтинг!</button>
       </div>
       <div style="overflow: hidden;">
         <div id="Progressbar"></div>
       </div>
     </div>
-    <div id="NoteField"></div>
-    <div id="globalErrorBox"></div>
+    <div style="margin-top: 5px" id="NoteField"></div>
+    <div style="margin-top: 5px" id="globalErrorBox"></div>
     <br />
     <div style="width: 100%; text-align: left" class="clear_fix">
       <div style="float: left; padding-top: 3px">
@@ -97,7 +97,7 @@
       </div>
       <div style="overflow: hidden; text-align: right">
         <strong>Отображать фото с рейтингом выше:</strong>
-        <input id="RatingThreshold" value="1" size="3">
+        <input class="no_glow_on_focus" id="RatingThreshold" value="1" size="3">
       </div>
     </div>
     <br />

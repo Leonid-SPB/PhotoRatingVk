@@ -1,18 +1,17 @@
 pending:
-) filter user input, drop tags
 ) share link button: https://new.vk.com/app3217496_105876?uidGid=334884
 ) refactoring/cleanup (clean global namespace)
 
 ) filter photos when likes threshold changes
-) test on all modern browsers: chrome, firefox, edge, ie
 
 ) update wiki page and tutorial for new users
 ) improve welcome dialog (link to help page), add tooltips?
-
+) style tuning: better loadding gif, fonts, etc...
+) test on all modern browsers: chrome, firefox, edge, ie
 
 ) video "how to use"
 ) donate button (disable ads)
-) style tuning: better loadding gif, fonts, etc...
+) filter user input, drop tags (not really necessary)
 
 done:
 x) improve gallery support while thumbs are loadding

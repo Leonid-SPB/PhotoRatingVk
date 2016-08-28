@@ -83,6 +83,17 @@ var VkApiWrapper = {
     return d.promise();
   },
 
+  wallPost: function (options, silent) {
+    var self = this;
+    var p = self.callVkApi("wall.post", options);
+    if (!silent) {
+      p.fail(function () {
+        self.displayError("Не удалось создать запись на стене!");
+      });
+    }
+    return p;
+  },
+
   queryAlbums: function (options, silent) {
     var self = this;
     var p = self.callVkApi("photos.getAlbums", options);
@@ -197,9 +208,9 @@ var VkApiWrapper = {
     return p;
   },
 
-  storageGet: function (key) {
+  storageGet: function (keys) {
     return this.callVkApi("storage.get", {
-      key: key
+      keys: keys
     });
   },
 
@@ -226,7 +237,7 @@ var VkApiWrapper = {
     //request isWelcomed var
     var isWelcomedKey = "isWelcomed3";
     VkApiWrapper.storageGet(isWelcomedKey).done(function (data) {
-      if (data == "1") { //already welcomed
+      if (data[isWelcomedKey] == "1") { //already welcomed
         //d.resolve();
         //return;
       }
@@ -243,11 +254,12 @@ var VkApiWrapper = {
 
   rateRequest: function (delay) {
     var isRatedKey = "isRated3";
-    var BlinkAfterDialogDelay = 1500;
+    var isWelcomedKey = "isWelcomed3";
+    var BlinkAfterDialogDelay = 2000;
 
     setTimeout(function () {
-      VkApiWrapper.storageGet(isRatedKey).done(function (data) {
-        if (data == "1") { //already rated
+      VkApiWrapper.storageGet(isWelcomedKey + "," + isRatedKey).done(function (data) {
+        if ((data[isWelcomedKey] == "0") || (data[isRatedKey] == "1")) { //already rated or first run
           //return;
         }
 

@@ -442,3 +442,16 @@ a.ui-button:active,
 	-webkit-box-shadow: -7px -7px 7px #000000;
 	box-shadow: -7px -7px 7px #000000;
 }
+
+/*fix for dialog close button in Chrome*/
+.ui-dialog-titlebar-close .ui-button-text
+{
+	display: none;
+}
+
+.ui-dialog .ui-dialog-titlebar button.ui-button:focus,
+.ui-dialog .ui-dialog-titlebar button.ui-button.ui-state-focus,
+.ui-dialog .ui-dialog-titlebar button.ui-button.ui-state-active,
+.ui-dialog .ui-dialog-titlebar button.ui-button.ui-state-hover  {
+	outline:none;
+}

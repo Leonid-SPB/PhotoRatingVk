@@ -45,7 +45,12 @@ function displayWarn(eMsg, noteDivId, hideAfter) {
 
 function sanitizeHtml(str) {
   //fixme using real sanitizer, meanwhile assume nothing harmful could fit into 16 characters
-  return str.slice(0, 16);
+  if (str) {
+    return str.toString().slice(0, 16);
+  } else {
+    return "";
+  }
+
   /*var urlTransformer, nameIdClassTransformer;
 
   // customize if you need to filter URLs and/or ids/names/classes

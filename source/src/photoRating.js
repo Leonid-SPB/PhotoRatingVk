@@ -6,7 +6,7 @@
 /* globals $, displayError, blinkDiv, VkApiWrapper, VK, showSpinner, hideSpinner, getParameterByName, sanitizeHtml*/
 
 var Settings = {
-  VkAppLocation: "//vk.com/app3337781",
+  VkAppLocation: "https://vk.com/app3217496",
   VkApiMaxCallsCount: 3,
   VkApiMaxCallsPeriod: 1000,
   VkApiCallTimeout: 2000,
@@ -15,7 +15,7 @@ var Settings = {
   ErrorHideAfter: 6000,
   MaxRatedPhotos: 500,
   MaxTotalPhotos: 1000000,
-  RateRequestDelay: 6000,
+  RateRequestDelay: 2000,
   BlinkDelay: 500,
   BlinkCount: 12,
   RedirectDelay: 3000,
@@ -48,6 +48,7 @@ var RPApi = {
   $chosenPhotosSpan: null,
   $ratingThreshSpin: null,
 
+  busyFlag: true,
   ownerId: 0,
   friendMap: [],
   groupMap: [],
@@ -56,6 +57,8 @@ var RPApi = {
   photosCount: 0,
   photosLoadedCnt: 0,
   photosFilteredCnt: 0,
+  goBtnLabelRating: "Рейтинг!",
+  goBtnLabelSave: "Сохранить",
 
   init: function () {
     var self = this;
@@ -72,18 +75,18 @@ var RPApi = {
       RPApi.onThreshSpinChange.call(self);
     });
 
-    var initDone = false;
+    self.disableControls(1);
+    self.busyFlag = true;
 
     VkApiWrapper.welcomeCheck().done(function () {
-      if (!initDone) {
-        self.disableControls(1);
+      if (self.busyFlag) {
         showSpinner();
       }
     });
 
     var d0 = VkApiWrapper.queryUser({
       user_ids: Settings.vkUserId,
-      fields: "first_name,last_name,screen_name"
+      fields: "first_name,last_name,screen_name,first_name_gen,last_name_gen"
     }).done(function (me_) {
       var me = me_[0];
       me.title = self.vkUserList.item(1).text;
@@ -95,7 +98,7 @@ var RPApi = {
     var d1 = VkApiWrapper.queryFriends({
       user_id: Settings.vkUserId,
       count: Settings.MaxFriendsList,
-      fields: "first_name,last_name,screen_name"
+      fields: "first_name,last_name,screen_name,first_name_gen,last_name_gen"
     }).done(function (friends) {
       friends = self.filterFriendList(friends.items);
 
@@ -127,7 +130,7 @@ var RPApi = {
       self.onUserChanged();
 
       if (!uidGid) { //normal mode
-        initDone = true;
+        self.busyFlag = false;
         hideSpinner();
         self.disableControls(0);
         return;
@@ -136,11 +139,14 @@ var RPApi = {
       //wall link mode
       //try resolve provided ID
       self.resolveUidGid(uidGid).always(function () {
-        initDone = true;
+        self.busyFlag = false;
         hideSpinner();
         self.disableControls(0);
+      }).done(function () {
+        self.onGoButton(true);
       });
     }).fail(function () {
+      self.busyFlag = false;
       hideSpinner();
       self.disableControls(1);
     });
@@ -149,16 +155,19 @@ var RPApi = {
   onUserChanged: function () {
     this.vkIdEdit.value = this.vkUserList.item(this.vkUserList.selectedIndex).value;
     this.vkGroupList.selectedIndex = 0;
+    $("#goButton").button("option", "label", this.goBtnLabelRating);
   },
 
   onGroupChanged: function () {
     this.vkIdEdit.value = this.vkGroupList.item(this.vkGroupList.selectedIndex).value;
     this.vkUserList.selectedIndex = 0;
+    $("#goButton").button("option", "label", this.goBtnLabelRating);
   },
 
   onUidGidChanged: function () {
     this.vkUserList.selectedIndex = 0;
     this.vkGroupList.selectedIndex = 0;
+    $("#goButton").button("option", "label", this.goBtnLabelRating);
   },
 
   onThreshSpinChange: function () {
@@ -331,8 +340,51 @@ var RPApi = {
     return ddd;
   },
 
-  onGoButton: function () {
+  wallPostResults: function () {
     var self = this;
+    var message;
+    var subj;
+
+    if (self.friendMap[self.vkIdEdit.value]) {
+      subj = self.friendMap[self.vkIdEdit.value];
+      if (subj.title == "Я") {
+        message = 'Мои лучшие фотографии в приложении "Рейтинг Фото"!';
+      } else {
+        message = 'Лучшие фотографии ' + subj.first_name_gen + " " + subj.last_name_gen + ' в приложении "Рейтинг Фото"!';
+      }
+    } else if (self.groupMap[self.vkIdEdit.value]) {
+      subj = self.groupMap[self.vkIdEdit.value];
+      var type = "группы";
+      if (subj.type == "page") {
+        type = "паблика";
+      } else if (subj.type == "event") {
+        type = "с мероприятия";
+      }
+      message = 'Лучшие фотографии ' + type + ' "' + subj.title + '" в приложении "Рейтинг Фото"!';
+    } else {
+      //error!
+      return;
+    }
+
+    var attachments = "photo-45558877_428286179," + Settings.VkAppLocation + "?uidGid=" + self.vkIdEdit.value;
+    var guid = "app3217496-" + self.vkIdEdit.value;
+
+    VkApiWrapper.wallPost({
+      friends_only: 0,
+      message: message,
+      attachments: attachments,
+      guid: guid
+    }, true);
+  },
+
+  onGoButton: function (noSpinner) {
+    var self = this;
+
+    //save search result on user's wall
+    if ($("#goButton").button("option", "label") == self.goBtnLabelSave) {
+      self.wallPostResults();
+      return;
+    }
 
     self.disableControls(1);
     $("#thumbs_container").ThumbsViewer("empty");
@@ -344,10 +396,14 @@ var RPApi = {
     self.photosLoadedCnt = 0;
     self.photosFilteredCnt = 0;
     Settings.likedThresh = +self.$ratingThreshSpin.spinner("value");
-    showSpinner();
+    self.busyFlag = true;
+    
+    if (!noSpinner)
+      showSpinner();
 
     function onFail() {
       self.disableControls(0);
+      self.busyFlag = false;
       hideSpinner();
     }
 
@@ -389,6 +445,7 @@ var RPApi = {
           self.$chosenPhotosSpan.text(self.ratedPhotos.length);
 
           if (!self.ratedPhotos.length) { //no photos found
+            self.busyFlag = false;
             hideSpinner();
             self.displayError("Не удалось составить рейтинг! Не найдено фотографий, с рейтингом выше " + Settings.likedThresh, Settings.ErrorHideAfter);
             self.disableControls(0);
@@ -399,11 +456,13 @@ var RPApi = {
             self.$progressBar.progressbar("value", 100);
             $("#thumbs_container").ThumbsViewer("updateAlbumMap", self.albumMap);
             $("#thumbs_container").ThumbsViewer("addThumbList", self.ratedPhotos).done(function () {
+              self.busyFlag = false;
               hideSpinner();
               self.disableControls(0);
 
               if (self.ratedPhotos.length > 10) {
                 VkApiWrapper.rateRequest(Settings.RateRequestDelay);
+                $("#goButton").button("option", "label", self.goBtnLabelSave);
               }
             }).fail(onFail);
           }).fail(onFail);
