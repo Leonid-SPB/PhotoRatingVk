@@ -58,7 +58,9 @@ var RPApi = {
   photosLoadedCnt: 0,
   photosFilteredCnt: 0,
   goBtnLabelRating: "Рейтинг!",
-  goBtnLabelSave: "Сохранить",
+  goBtnTooltipRating: "Составить рейтинг фотографий",
+  goBtnLabelSave: "Сохранить на стену",
+  goBtnTooltipSave: "Сохранить рейтинг на стену",
 
   init: function () {
     var self = this;
@@ -348,9 +350,9 @@ var RPApi = {
     if (self.friendMap[self.vkIdEdit.value]) {
       subj = self.friendMap[self.vkIdEdit.value];
       if (subj.title == "Я") {
-        message = 'Мои лучшие фотографии в приложении "Рейтинг Фото"!';
+        message = 'Оцени мои лучшие фотографии в приложении "Рейтинг Фото"!';
       } else {
-        message = 'Лучшие фотографии ' + subj.first_name_gen + " " + subj.last_name_gen + ' в приложении "Рейтинг Фото"!';
+        message = 'Оцени лучшие фотографии ' + subj.first_name_gen + " " + subj.last_name_gen + ' в приложении "Рейтинг Фото"!';
       }
     } else if (self.groupMap[self.vkIdEdit.value]) {
       subj = self.groupMap[self.vkIdEdit.value];
@@ -360,13 +362,13 @@ var RPApi = {
       } else if (subj.type == "event") {
         type = "с мероприятия";
       }
-      message = 'Лучшие фотографии ' + type + ' "' + subj.title + '" в приложении "Рейтинг Фото"!';
+      message = 'Оцени лучшие фотографии ' + type + ' "' + subj.title + '" в приложении "Рейтинг Фото"!';
     } else {
       //error!
       return;
     }
 
-    var attachments = "photo-45558877_428286179," + Settings.VkAppLocation + "?uidGid=" + self.vkIdEdit.value;
+    var attachments = /*"photo-45558877_428286179," + */Settings.VkAppLocation + "?uidGid=" + self.vkIdEdit.value;
     var guid = "app3217496-" + self.vkIdEdit.value;
 
     VkApiWrapper.wallPost({
