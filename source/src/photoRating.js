@@ -3,15 +3,11 @@
 */
 
 //requires VkApiWrapper, jQuery, highslide, spin.js
-/* globals $, displayError, blinkDiv, VkApiWrapper, VK, showSpinner, hideSpinner, getParameterByName, sanitizeHtml*/
+/* globals $, Utils, VkApiWrapper, VkAppUtils, VK*/
 
 var Settings = {
-  VkAppLocation: "https://vk.com/app3217496",
-  VkApiMaxCallsCount: 3,
-  VkApiMaxCallsPeriod: 1000,
-  VkApiCallTimeout: 2000,
-  VkApiCallMaxRetries: 4,
-  GetPhotosChunksSz: 100,
+  VkAppLocation: "https://vk.com/app5597335", //app5597335 - beta app
+  GetPhotosChunksSz: 200,
   ErrorHideAfter: 6000,
   MaxRatedPhotos: 500,
   MaxTotalPhotos: 1000000,
@@ -21,22 +17,15 @@ var Settings = {
   RedirectDelay: 3000,
   MaxGroupNameLen: 40,
   MaxFriendsList: 500,
-  MaxLikeThresh: 200,
+  MaxLikeThresh: 1000,
   RatingRefreshDelay: 700,
+
+  QueryUserFields: "first_name,last_name,screen_name,first_name_gen,last_name_gen",
 
   vkUserId: null,
   vkSid: null,
-  likedThresh: 1,
-
-  VkPhotoPopupSettings: 'toolbar=yes,scrollbars=yes,resizable=yes,width=1024,height=600',
-  AddThumbDelay: 30,
-  AddThumbCount: 20,
-  LoadThumbDelay: 250
+  likedThresh: 1
 };
-
-function showInviteBox() {
-  VK.callMethod("showInviteBox");
-}
 
 var RPApi = {
   $progressBar: null,
@@ -81,76 +70,91 @@ var RPApi = {
     self.disableControls(1);
     self.busyFlag = true;
 
-    VkApiWrapper.welcomeCheck().done(function () {
+    VkAppUtils.welcomeCheck().done(function () {
+      //show spinner if still busy when dialog is closed
       if (self.busyFlag) {
-        showSpinner();
+        Utils.showSpinner();
       }
     });
 
+    //query information about application user
     var d0 = VkApiWrapper.queryUser({
       user_ids: Settings.vkUserId,
-      fields: "first_name,last_name,screen_name,first_name_gen,last_name_gen"
+      fields: Settings.QueryUserFields
     }).done(function (me_) {
       var me = me_[0];
+      //update user list select
       me.title = self.vkUserList.item(1).text;
       me.opt = self.vkUserList.item(1);
       me.opt.value = me.screen_name;
+      //update friendMap: screen_name -> user_info
       self.friendMap[me.screen_name] = me;
     });
 
+    //query friends
     var d1 = VkApiWrapper.queryFriends({
       user_id: Settings.vkUserId,
       count: Settings.MaxFriendsList,
-      fields: "first_name,last_name,screen_name,first_name_gen,last_name_gen"
+      fields: Settings.QueryUserFields
     }).done(function (friends) {
-      friends = self.filterFriendList(friends.items);
-
+      //filter banned/inactive users
+      friends = VkAppUtils.filterFriendList(friends.items);
+      //populate user list select
       for (var i = 0; i < friends.length; i++) {
         friends[i].opt = new Option(friends[i].title, friends[i].screen_name, false, false);
-        self.friendMap[friends[i].screen_name] = friends[i];
+        self.friendMap[friends[i].screen_name] = friends[i]; //update friendMap: screen_name -> user_info
         self.vkUserList.add(friends[i].opt, null);
       }
     });
 
+    //query groups
     var d2 = VkApiWrapper.queryUserGroups({
       user_id: Settings.vkUserId,
       count: Settings.MaxFriendsList,
       extended: 1
     }).done(function (groups) {
-      groups = self.filterGroupList(groups.items);
-
+      //filter banned/inactive groups
+      groups = VkAppUtils.filterGroupList(groups.items);
+      //populate group list select
       for (var i = 0; i < groups.length; i++) {
         groups[i].opt = new Option(groups[i].title, groups[i].screen_name, false, false);
-        self.groupMap[groups[i].screen_name] = groups[i];
+        self.groupMap[groups[i].screen_name] = groups[i]; //update groupMap: screen_name -> group_info
         self.vkGroupList.add(groups[i].opt, null);
       }
     });
 
+    //when all info collected
     $.when(d0, d1, d2).done(function () {
-      var uidGid = sanitizeHtml(getParameterByName("uidGid", true));
+      //url parameter when applicatiuon launched by a wall link
+      var uidGid = Utils.sanitizeParameter(Utils.getParameterByName("uidGid", true));
 
+      //by default: select user itself in user list select
       self.vkUserList.selectedIndex = 1;
       self.onUserChanged();
 
-      if (!uidGid) { //normal mode
+      if (!uidGid) {
+        //normal mode, initialization finished
         self.busyFlag = false;
-        hideSpinner();
+        Utils.hideSpinner();
         self.disableControls(0);
         return;
       }
 
       //wall link mode
       //try resolve provided ID
-      self.resolveUidGid(uidGid).always(function () {
+      self.resolveUidGid(uidGid).fail(function () {
+        //failed to resolve ID
         self.busyFlag = false;
-        hideSpinner();
+        Utils.hideSpinner();
         self.disableControls(0);
       }).done(function () {
+        //if uidGid was valid, start building photo rating automatically
         self.onGoButton(true);
       });
     }).fail(function () {
+      //initialization failed, disable controls
       self.busyFlag = false;
-      hideSpinner();
+      Utils.hideSpinner();
       self.disableControls(1);
     });
   },
@@ -183,22 +187,30 @@ var RPApi = {
         return;
       }
 
-      var photos = self.filterPhotos(self.ratedPhotos, Settings.likedThresh);
+      //remove all photos from container
+      $("#thumbs_container").ThumbsViewer("empty");
+
+      //make new list of photos based on current likes threshold
+      var photos = self.filterPhotosByRating(self.ratedPhotos, Settings.likedThresh);
       if (!photos.length) {
+        //if threshold was too high, lower it to see at least one photo
         Settings.likedThresh = self.ratedPhotos[0].likes.count;
-        photos = self.filterPhotos(self.ratedPhotos, Settings.likedThresh);
+        photos = self.filterPhotosByRating(self.ratedPhotos, Settings.likedThresh);
         self.$ratingThreshSpin.spinner("value", Settings.likedThresh);
       }
       self.$chosenPhotosSpan.text(photos.length);
-      $("#thumbs_container").ThumbsViewer("empty");
+
+      //add photos to the container
       $("#thumbs_container").ThumbsViewer("updateAlbumMap", self.albumMap);
       $("#thumbs_container").ThumbsViewer("addThumbList", photos);
     }
 
+    //cancell previously schedulled refreshRating()
     if (self.refreshTmoutId) {
       clearTimeout(self.refreshTmoutId);
     }
 
+    //schedule/reschedule refreshRating()
     self.refreshTmoutId = setTimeout(refreshRating, Settings.RatingRefreshDelay);
   },
 
@@ -216,186 +228,6 @@ var RPApi = {
     self.vkUserList.disabled = dval;
     self.vkGroupList.disabled = dval;
     self.$ratingThreshSpin.spinner(dstr);
-  },
-
-  //remove deactivated, create title, sort alphabetically
-  filterFriendList: function (friendList) {
-    var friends = [];
-    for (var i = 0; i < friendList.length; ++i) {
-      if ("deactivated" in friendList[i]) {
-        continue;
-      }
-      //to convert escape sequences (&amp;, &quot;...) to chars
-      var title = $("<div>").html(friendList[i].first_name + " " + friendList[i].last_name).text();
-      friendList[i].title = title;
-      friends.push(friendList[i]);
-    }
-
-    friends = friends.sort(function (a, b) {
-      var ta = a.title.toLowerCase();
-      var tb = b.title.toLowerCase();
-      if (ta < tb) {
-        return -1;
-      } else if (ta > tb) {
-        return 1;
-      }
-      return 0;
-    });
-
-    return friends;
-  },
-
-  filterGroupList: function (groupList) {
-    var groups = [];
-    for (var i = 0; i < groupList.length; ++i) {
-      if ("deactivated" in groupList[i]) {
-        continue;
-      }
-      //to convert escape sequences (&amp;, &quot;...) to chars
-      var title = $("<div>").html(groupList[i].name).text();
-      if (title.length > Settings.MaxGroupNameLen) {
-        title = title.substring(0, Settings.MaxGroupNameLen) + "...";
-      }
-      groupList[i].title = title;
-      groups.push(groupList[i]);
-    }
-
-    groups = groups.sort(function (a, b) {
-      var ta = a.title.toLowerCase();
-      var tb = b.title.toLowerCase();
-      if (ta < tb) {
-        return -1;
-      } else if (ta > tb) {
-        return 1;
-      }
-      return 0;
-    });
-
-    return groups;
-  },
-
-  resolveUidGid: function (str) {
-    var self = this;
-    var ddd = $.Deferred();
-
-    str = str.trim();
-    if (str in self.friendMap) {
-      self.vkUserList.selectedIndex = self.friendMap[str].opt.index;
-      self.onUserChanged();
-
-      ddd.resolve(self.friendMap[str], true);
-    } else if (str in self.groupMap) {
-      self.vkGroupList.selectedIndex = self.groupMap[str].opt.index;
-      self.onGroupChanged();
-
-      ddd.resolve(self.groupMap[str], false);
-    } else {
-      self.resolveUidGid__(str).done(function (userGrp, isUser) {
-        if (isUser) {
-          userGrp.opt = new Option(userGrp.title, userGrp.screen_name, false, false);
-          self.friendMap[userGrp.screen_name] = userGrp;
-
-          self.vkUserList.add(userGrp.opt, 1);
-          self.vkUserList.selectedIndex = 1;
-          self.onUserChanged();
-        } else {
-          userGrp.opt = new Option(userGrp.title, userGrp.screen_name, false, false);
-          self.groupMap[userGrp.screen_name] = userGrp;
-
-          self.vkGroupList.add(userGrp.opt, 1);
-          self.vkGroupList.selectedIndex = 1;
-          self.onGroupChanged();
-        }
-
-        ddd.resolve(userGrp, isUser);
-      }).fail(function () {
-        ddd.reject();
-      });
-    }
-
-    return ddd;
-  },
-
-  resolveUidGid__: function (str) {
-    var self = this;
-    var ddd = $.Deferred();
-
-    function onFail() {
-      self.displayError("Не удалось получить информацию о пользователе/группе: '" + str + "'", Settings.ErrorHideAfter);
-      ddd.reject();
-    }
-
-    VkApiWrapper.resolveScreenName({
-      screen_name: str
-    }, true).done(function (resp) {
-      if (resp.type == "user") {
-        VkApiWrapper.queryUser({
-          user_ids: resp.object_id,
-          fields: "first_name,last_name,screen_name"
-        }).done(function (friends) {
-          friends = self.filterFriendList(friends);
-          if (friends.length) {
-            ddd.resolve(friends[0], true);
-          } else {
-            onFail();
-          }
-        }).fail(onFail);
-      } else if ((resp.type == "group") || (resp.type == "page")) {
-        VkApiWrapper.queryGroup({
-          group_ids: resp.object_id
-        }).done(function (groups) {
-          groups = self.filterGroupList(groups);
-          if (groups.length) {
-            ddd.resolve(groups[0], false);
-          } else {
-            onFail();
-          }
-        }).fail(onFail);
-      } else {
-        onFail();
-        return;
-      }
-
-    }).fail(onFail);
-
-    return ddd;
-  },
-
-  wallPostResults: function () {
-    var self = this;
-    var message;
-    var subj;
-
-    if (self.friendMap[self.vkIdEdit.value]) {
-      subj = self.friendMap[self.vkIdEdit.value];
-      if (subj.title == "Я") {
-        message = 'Оцени мои лучшие фотографии в приложении "Рейтинг Фото"!';
-      } else {
-        message = 'Оцени лучшие фотографии ' + subj.first_name_gen + " " + subj.last_name_gen + ' в приложении "Рейтинг Фото"!';
-      }
-    } else if (self.groupMap[self.vkIdEdit.value]) {
-      subj = self.groupMap[self.vkIdEdit.value];
-      var type = "группы";
-      if (subj.type == "page") {
-        type = "паблика";
-      } else if (subj.type == "event") {
-        type = "с мероприятия";
-      }
-      message = 'Оцени лучшие фотографии ' + type + ' "' + subj.title + '" в приложении "Рейтинг Фото"!';
-    } else {
-      //error!
-      return;
-    }
-
-    var attachments = /*"photo-45558877_428286179," + */ Settings.VkAppLocation + "?uidGid=" + self.vkIdEdit.value;
-    var guid = "app3217496-" + self.vkIdEdit.value;
-
-    VkApiWrapper.wallPost({
-      friends_only: 0,
-      message: message,
-      attachments: attachments,
-      guid: guid
-    }, true);
   },
 
   onGoButton: function (noSpinner) {
@@ -419,20 +251,25 @@ var RPApi = {
     Settings.likedThresh = +self.$ratingThreshSpin.spinner("value");
     self.busyFlag = true;
 
+    //don't show spinner when welcome dialog is active
     if (!noSpinner)
-      showSpinner();
+      Utils.showSpinner();
 
+    //default error handler
+    //don't block the application so user can try again
     function onFail() {
       self.disableControls(0);
       self.busyFlag = false;
-      hideSpinner();
+      Utils.hideSpinner();
     }
 
+    //no screen name, make rating fou the user itself then
     if (!self.vkIdEdit.value) {
       self.vkUserList.selectedIndex = 1;
       self.onUserChanged();
     }
 
+    //take screen_name from edit box and resolve user data
     self.resolveUidGid(self.vkIdEdit.value).done(function (userGroup, isUser) {
       var ownerId = +userGroup.id;
       ownerId = isUser ? ownerId : -ownerId; //make negative ID for groups/pages
@@ -445,53 +282,75 @@ var RPApi = {
         self.ratedPhotos = self.ratedPhotos.concat(photos);
       }
 
-      self.getTotalPhotosCount(ownerId).done(function (count) {
+      function filterFn(photos) {
+        return self.filterPhotosByRating(photos, 1);
+      }
+
+      //request total number of photos for progress reporting purpose
+      VkAppUtils.getTotalPhotosCount(ownerId).done(function (count) {
         self.photosCount = count;
         self.$totalPhotosSpan.text(count);
-        var d1 = self.queryAllPhotos(ownerId, 0, Settings.MaxTotalPhotos);
-        var d2 = self.queryAlbumPhotos(ownerId, 'saved', 0, Settings.MaxTotalPhotos);
-        var d3 = self.queryAlbumPhotos(ownerId, 'wall', 0, Settings.MaxTotalPhotos);
-        var d4 = self.queryAlbumPhotos(ownerId, 'profile', 0, Settings.MaxTotalPhotos);
+
+        //query photos from all albums and from service albums
+        var d1 = VkAppUtils.queryAllPhotos(ownerId, 0, Settings.MaxTotalPhotos, filterFn);
+        var d2 = VkAppUtils.queryAlbumPhotos(ownerId, 'saved', 0, Settings.MaxTotalPhotos, filterFn);
+        var d3 = VkAppUtils.queryAlbumPhotos(ownerId, 'wall', 0, Settings.MaxTotalPhotos, filterFn);
+        var d4 = VkAppUtils.queryAlbumPhotos(ownerId, 'profile', 0, Settings.MaxTotalPhotos, filterFn);
 
         d1.progress(onProgress).fail(onFail).done(pushPhotos);
         d2.progress(onProgress).fail(onFail).done(pushPhotos);
         d3.progress(onProgress).fail(onFail).done(pushPhotos);
         d4.progress(onProgress).fail(onFail).done(pushPhotos);
 
+        //when all photos have been retreived
         $.when(d1, d2, d3, d4).done(function () {
+          //sort by rating and trim
           self.ratedPhotos = self.sortPhotosByRating(self.ratedPhotos);
           self.$ratedPhotosSpan.text(self.ratedPhotos.length);
           if (self.ratedPhotos.length > Settings.MaxRatedPhotos) {
             self.ratedPhotos = self.ratedPhotos.slice(0, Settings.MaxRatedPhotos);
           }
 
-          if (!self.ratedPhotos.length) { //no photos found
+          //no rated photos found
+          if (!self.ratedPhotos.length) {
             self.busyFlag = false;
-            hideSpinner();
-            self.displayError("Не удалось составить рейтинг! Не найдено фотографий, с рейтингом выше 1", Settings.ErrorHideAfter);
+            Utils.hideSpinner();
+            self.displayError("Не удалось составить рейтинг! Не найдено фотографий, с рейтингом выше 1");
             self.disableControls(0);
             return;
           }
 
-          self.queryAlbumsInfo(ownerId, self.ratedPhotos).done(function () {
+          //for collected photos request a map: album_id -> album_title
+          VkAppUtils.queryAlbumsInfo(ownerId, self.ratedPhotos).done(function (albumMap) {
+            //all data has been requested at this point
             self.$progressBar.progressbar("value", 100);
+
+            //push album map to ThumbsViewer, map will be used for image captions
+            self.albumMap = albumMap;
             $("#thumbs_container").ThumbsViewer("updateAlbumMap", self.albumMap);
 
-            var photos = self.filterPhotos(self.ratedPhotos, Settings.likedThresh);
+            //filter photos by rating threshold
+            var photos = self.filterPhotosByRating(self.ratedPhotos, Settings.likedThresh);
 
             if (!photos.length) {
+              //if threshold was too high, lower it to see at least one photo
               Settings.likedThresh = self.ratedPhotos[0].likes.count;
-              photos = self.filterPhotos(self.ratedPhotos, Settings.likedThresh);
+              photos = self.filterPhotosByRating(self.ratedPhotos, Settings.likedThresh);
               self.$ratingThreshSpin.spinner("value", Settings.likedThresh);
             }
+
+            //push photos to ThumbsViewer
             self.$chosenPhotosSpan.text(photos.length);
             $("#thumbs_container").ThumbsViewer("addThumbList", photos).done(function () {
+              //job is done!
               self.busyFlag = false;
-              hideSpinner();
+              Utils.hideSpinner();
               self.disableControls(0);
 
+              //if rating was not empty, ask user to rate application
+              //and enable "share" button
               if (photos.length > 10) {
-                VkApiWrapper.rateRequest(Settings.RateRequestDelay);
+                VkAppUtils.rateRequest(Settings.RateRequestDelay);
                 $("#goButton").button("option", "label", self.goBtnLabelSave);
               }
             }).fail(onFail);
@@ -501,6 +360,7 @@ var RPApi = {
     }).fail(onFail);
   },
 
+  //update progress bar and rated photos number span
   updateProgress: function (p, q) {
     this.photosLoadedCnt += p;
     this.photosFilteredCnt += q;
@@ -515,7 +375,100 @@ var RPApi = {
     this.$ratedPhotosSpan.text(this.photosFilteredCnt);
   },
 
-  filterPhotos: function (photos, likedThresh) {
+  //resolve user/group by screen_name
+  resolveUidGid: function (str) {
+    var self = this;
+    var ddd = $.Deferred();
+
+    str = str.trim();
+
+    //tries to use cached data(friendMap/groupMap) before requesting server
+    if (str in self.friendMap) {
+      self.vkUserList.selectedIndex = self.friendMap[str].opt.index;
+      self.onUserChanged();
+
+      ddd.resolve(self.friendMap[str], true);
+    } else if (str in self.groupMap) {
+      self.vkGroupList.selectedIndex = self.groupMap[str].opt.index;
+      self.onGroupChanged();
+
+      ddd.resolve(self.groupMap[str], false);
+    } else {
+      //provided screen_name was not found in local cache, requesting data from VK
+      VkAppUtils.resolveUidGid(str).done(function (userGrp, isUser) {
+        if (isUser) {
+          //add new item to list select and cache
+          userGrp.opt = new Option(userGrp.title, userGrp.screen_name, false, false);
+          self.friendMap[userGrp.screen_name] = userGrp;
+          self.vkUserList.add(userGrp.opt, 1);
+
+          //make new item selected
+          self.vkUserList.selectedIndex = 1;
+          self.onUserChanged();
+        } else {
+          //add new item to list select and cache
+          userGrp.opt = new Option(userGrp.title, userGrp.screen_name, false, false);
+          self.groupMap[userGrp.screen_name] = userGrp;
+          self.vkGroupList.add(userGrp.opt, 1);
+
+          //make new item selected
+          self.vkGroupList.selectedIndex = 1;
+          self.onGroupChanged();
+        }
+
+        ddd.resolve(userGrp, isUser);
+      }).fail(function () {
+        ddd.reject();
+      });
+    }
+
+    return ddd;
+  },
+
+  //post a link to the current rating to user wall
+  //so friends can see the same rating when they open the application
+  wallPostResults: function () {
+    var self = this;
+    var message;
+    var subj;
+
+    //create message
+    if (self.friendMap[self.vkIdEdit.value]) {
+      //rating for me or other user
+      subj = self.friendMap[self.vkIdEdit.value];
+      if (subj.title == "Я") {
+        message = 'Оцени мои лучшие фотографии в приложении "Рейтинг Фото"!';
+      } else {
+        message = 'Оцени лучшие фотографии ' + subj.first_name_gen + " " + subj.last_name_gen + ' в приложении "Рейтинг Фото"!';
+      }
+    } else if (self.groupMap[self.vkIdEdit.value]) {
+      //rating for group/public/event
+      subj = self.groupMap[self.vkIdEdit.value];
+      var type = "группы";
+      if (subj.type == "page") {
+        type = "паблика";
+      } else if (subj.type == "event") {
+        type = "с мероприятия";
+      }
+      message = 'Оцени лучшие фотографии ' + type + ' "' + subj.title + '" в приложении "Рейтинг Фото"!';
+    } else {
+      //error!
+      return;
+    }
+
+    var attachments = /*"photo-45558877_428286179," + */ Settings.VkAppLocation + "?uidGid=" + self.vkIdEdit.value;
+    var guid = "app5597335-" + self.vkIdEdit.value;
+
+    //request to make a wall post
+    VkApiWrapper.wallPost({
+      friends_only: 0,
+      message: message,
+      attachments: attachments,
+      guid: guid
+    }, true);
+  },
+
+  filterPhotosByRating: function (photos, likedThresh) {
     var filtred = [];
 
     if (!photos) {
@@ -539,187 +492,21 @@ var RPApi = {
     return photos.sort(likedPhotosSortFn);
   },
 
-  getTotalPhotosCount: function (ownerId) {
-    var self = this;
-    var ddd = $.Deferred();
-    var photosCount = 0;
-
-    //showSpinner();
-
-    var d1 = VkApiWrapper.queryAllPhotos({
-      owner_id: ownerId,
-      offset: 0,
-      count: 0,
-      no_service_albums: 1
-    });
-    var d2 = VkApiWrapper.queryPhotos({
-      owner_id: ownerId,
-      album_id: 'wall',
-      offset: 0,
-      count: 0
-    });
-    var d3 = VkApiWrapper.queryPhotos({
-      owner_id: ownerId,
-      album_id: 'saved',
-      offset: 0,
-      count: 0
-    });
-    var d4 = VkApiWrapper.queryPhotos({
-      owner_id: ownerId,
-      album_id: 'profile',
-      offset: 0,
-      count: 0
-    });
-
-    function updCnt(response) {
-      photosCount += response.count;
-    }
-
-    d1.done(updCnt);
-    d2.done(updCnt);
-    d3.done(updCnt);
-    d4.done(updCnt);
-
-    $.when(d1, d2, d3, d4).done(function () {
-      //hideSpinner();
-      ddd.resolve(photosCount);
-    }).fail(function () {
-      //hideSpinner();
-      ddd.reject();
-    });
-
-    return ddd.promise();
-  },
-
-  queryAllPhotos: function (ownerId, offset, maxCount) {
-    var self = this;
-    var ddd = $.Deferred();
-    var photos = [];
-
-    function getNextChunk__(offset, countLeft) {
-      var count = Math.min(countLeft, Settings.GetPhotosChunksSz);
-      VkApiWrapper.queryAllPhotos({
-        owner_id: ownerId,
-        offset: offset,
-        count: count,
-        extended: 1,
-        photo_sizes: 1,
-        no_service_albums: 1
-      }).done(
-        function (response) {
-          if (!response.items) {
-            response.items = [];
-          }
-
-          var photosFiltered = self.filterPhotos(response.items, 1);
-          photos = photos.concat(photosFiltered);
-
-          ddd.notify(response.items.length, photosFiltered.length);
-
-          if ((offset < response.count) && (countLeft > 0)) {
-            getNextChunk__(offset + response.items.length, countLeft - response.items.length);
-          } else {
-            ddd.resolve(photos);
-          }
-        }
-      ).fail(function () {
-        ddd.reject();
-      });
-    }
-
-    getNextChunk__(offset, maxCount);
-
-    return ddd.promise();
-  },
-
-  queryAlbumPhotos: function (ownerId, albumId, offset, maxCount) {
-    var self = this;
-    var ddd = $.Deferred();
-    var photos = [];
-
-    function getNextChunk__(offset, countLeft) {
-      var count = Math.min(countLeft, Settings.GetPhotosChunksSz);
-      VkApiWrapper.queryPhotos({
-        owner_id: ownerId,
-        album_id: albumId,
-        offset: offset,
-        count: count,
-        extended: 1,
-        photo_sizes: 1,
-        no_service_albums: 0
-      }).done(
-        function (response) {
-          if (!response.items) {
-            response.items = [];
-          }
-
-          var photosFiltered = self.filterPhotos(response.items, 1);
-          photos = photos.concat(photosFiltered);
-
-          ddd.notify(response.items.length, photosFiltered.length);
-
-          if ((offset < response.count) && (countLeft > 0)) {
-            getNextChunk__(offset + response.items.length, countLeft - response.items.length);
-          } else {
-            ddd.resolve(photos);
-          }
-        }
-      ).fail(function () {
-        ddd.reject();
-      });
-    }
-
-    getNextChunk__(offset, maxCount);
-
-    return ddd.promise();
-
-  },
-
-  queryAlbumsInfo: function (ownerId, ratedPhotos) {
-    var self = this;
-
-    self.albumMap = {};
-    for (var i = 0; i < ratedPhotos.length; ++i) {
-      self.albumMap[ratedPhotos[i].album_id] = "";
-    }
-
-    var ddd = $.Deferred();
-    var albumListStr = Object.keys(self.albumMap).join();
-    VkApiWrapper.queryAlbums({
-      owner_id: ownerId,
-      album_ids: albumListStr
-    }).done(function (response) {
-      for (var i = 0; i < response.count; ++i) {
-        self.albumMap[response.items[i].id] = response.items[i].title;
-      }
-
-      ddd.resolve();
-    }).fail(function () {
-      ddd.reject();
-    });
-
-    return ddd.promise();
-  },
-
-  displayError: function (errMsg, hideAfter) {
+  displayError: function (errMsg) {
     //use global displayError(msg, errorBoxId)
-    displayError(errMsg, "globalErrorBox", hideAfter);
+    VkAppUtils.displayError(errMsg, "globalErrorBox", Settings.ErrorHideAfter);
   },
 
 };
 
 //Initialize application
 $(function () {
-  Settings.vkUserId = getParameterByName("viewer_id");
-  Settings.vkSid = getParameterByName("sid");
+  Settings.vkUserId = Utils.sanitizeParameter(Utils.getParameterByName("viewer_id"));
+  Settings.vkSid = Utils.sanitizeParameter(Utils.getParameterByName("sid"));
 
-  VkApiWrapper.validateApp(Settings.vkSid, Settings.VkAppLocation, Settings.RedirectDelay);
+  VkAppUtils.validateApp(Settings.vkSid, Settings.VkAppLocation, Settings.RedirectDelay);
 
   $("#thumbs_container").ThumbsViewer({
-    AddThumbDelay: Settings.AddThumbDelay,
-    AddThumbCount: Settings.AddThumbCount,
-    LoadThumbDelay: Settings.LoadThumbDelay,
-    VkPhotoPopupSettings: Settings.VkPhotoPopupSettings,
     disableSel: true
   });
   $("#Progressbar").progressbar({
@@ -763,14 +550,15 @@ $(function () {
     max: Settings.MaxLikeThresh
   });
 
-  showSpinner();
+  Utils.showSpinner();
 
   var d = $.Deferred();
   VK.init(
     function () {
       // API initialization succeeded
-      VkApiWrapper.init(Settings.VkApiMaxCallsCount, Settings.VkApiMaxCallsPeriod,
-        Settings.VkApiCallTimeout, Settings.VkApiCallMaxRetries);
+      VkApiWrapper.init({
+        errorHandler: RPApi.displayError
+      });
 
       //preloader AD
       /*if (typeof VKAdman !== 'undefined') {
@@ -788,7 +576,7 @@ $(function () {
     },
     function () {
       // API initialization failed
-      displayError("Не удалось инициализировать VK JS API! Попробуйте перезагрузить приложение.", "globalErrorBox");
+      VkAppUtils.displayError("Не удалось инициализировать VK JS API! Попробуйте перезагрузить приложение.", "globalErrorBox");
       d.reject();
     },
     '5.53'
@@ -796,7 +584,7 @@ $(function () {
 
   //VK API init finished: query user data
   d.done(function () {
-    hideSpinner();
+    Utils.hideSpinner();
     RPApi.init();
   });
 });

@@ -3,35 +3,38 @@
 */
 
 //requires jQuery, utils(RateLimit, displayError), Vk API
-/* globals $, RateLimit, displayError, blinkDiv, Settings, VK*/
+/* globals $, RateLimit, VK*/
 
 var VkApiWrapper = {
-  //allowed: 3 requests in 1000 ms
-  apiMaxCallsCount: 3,
-  apiMaxCallsPeriod: 1000,
-  apiCallTimeout: 2000,
-  errorHideAfter: 6000,
-  apiCallMaxRetries: 4,
-  apiTmoutMultiplier: 2.0,
+  defaults_: {
+    //allowed: 3 requests in 1000 ms
+    apiMaxCallsCount: 3,
+    apiMaxCallsPeriod: 1000,
+
+    //timeout-retry params
+    apiCallTimeout: 2000,
+    apiCallMaxRetries: 4,
+    apiTmoutMultiplier: 2.0,
+
+    errorHandler: function (errMsg) {
+      console.log("VkApiWrapper:" + errMsg);
+    }
+  },
 
   ApiErrCodes: {
     AccessDenied: 15,
     AlbumAccessDenied: 200
   },
 
-  rateLimiter: null,
+  rateLimiter_: null,
 
-  init: function (apiMaxCallsCount, apiMaxCallsPeriod, apiCallTimeout, apiCallMaxRetries) {
-    this.apiMaxCallsCount = apiMaxCallsCount;
-    this.apiMaxCallsPeriod = apiMaxCallsPeriod;
-    this.apiCallTimeout = apiCallTimeout;
-    this.apiCallMaxRetries = apiCallMaxRetries;
-    this.rateLimiter = new RateLimit(this.apiMaxCallsCount, this.apiMaxCallsPeriod, false);
+  settings_: {
+
   },
 
-  displayError: function (errMsg) {
-    //use global displayError(msg, errorBoxId)
-    displayError(errMsg, "globalErrorBox", this.errorHideAfter);
+  init: function (opts) {
+    $.extend(this.settings_, this.defaults_, opts);
+    this.rateLimiter_ = new RateLimit(this.settings_.apiMaxCallsCount, this.settings_.apiMaxCallsPeriod, false);
   },
 
   //calls VK API method with specified parameters
@@ -39,16 +42,17 @@ var VkApiWrapper = {
   callVkApi: function (vkApiMethod, methodParams) {
     var self = this;
     var d = $.Deferred();
-    var retries = self.apiCallMaxRetries;
-    var timeout = self.apiCallTimeout;
+    var retries = self.settings_.apiCallMaxRetries;
+    var timeout = self.settings_.apiCallTimeout;
 
     function scheduleVkApiMethod() {
-      self.rateLimiter.schedule(function () {
+      self.rateLimiter_.schedule(function () {
         setTimeout(function () {
+          //check if api call is still in progress
           if (d.state() === "pending") {
             if (retries-- > 0) {
               console.log("VkApiWrapper: VK.api call timeout, rescheduling request");
-              timeout *= self.apiTmoutMultiplier;
+              timeout *= self.settings_.apiTmoutMultiplier;
               scheduleVkApiMethod();
             } else {
               console.log("VkApiWrapper: VK.api call timeout, all retries failed");
@@ -56,7 +60,7 @@ var VkApiWrapper = {
             }
           }
 
-          //no timeout, api call already finished
+          //else: no timeout, api call has finished
         }, timeout);
 
         VK.api(vkApiMethod, methodParams, function (data) {
@@ -88,7 +92,7 @@ var VkApiWrapper = {
     var p = self.callVkApi("wall.post", options);
     if (!silent) {
       p.fail(function () {
-        self.displayError("Не удалось создать запись на стене!");
+        self.settings_.errorHandler("Не удалось создать запись на стене!");
       });
     }
     return p;
@@ -99,7 +103,7 @@ var VkApiWrapper = {
     var p = self.callVkApi("photos.getAlbums", options);
     if (!silent) {
       p.fail(function () {
-        self.displayError("Не удалось получить список альбомов!");
+        self.settings_.errorHandler("Не удалось получить список альбомов!");
       });
     }
     return p;
@@ -121,7 +125,7 @@ var VkApiWrapper = {
         d.resolve(resp);
       } else {
         if (!silent) {
-          self.displayError("Не удалось получить список фотографий из выбранного альбома!");
+          self.settings_.errorHandler("Не удалось получить список фотографий из выбранного альбома!");
         }
         d.reject();
       }
@@ -135,7 +139,7 @@ var VkApiWrapper = {
     var p = self.callVkApi("photos.getAll", options);
     if (!silent) {
       p.fail(function () {
-        self.displayError("Не удалось получить список фотографий пользователя или группы!");
+        self.settings_.errorHandler("Не удалось получить список фотографий пользователя или группы!");
       });
     }
     return p;
@@ -146,7 +150,7 @@ var VkApiWrapper = {
     var p = self.callVkApi("friends.get", options);
     if (!silent) {
       p.fail(function () {
-        self.displayError("Не удалось получить список друзей!");
+        self.settings_.errorHandler("Не удалось получить список друзей!");
       });
     }
     return p;
@@ -157,7 +161,7 @@ var VkApiWrapper = {
     var p = self.callVkApi("users.get", options);
     if (!silent) {
       p.fail(function () {
-        self.displayError("Не удалось получить информацию о пользователе!");
+        self.settings_.errorHandler("Не удалось получить информацию о пользователе!");
       });
     }
     return p;
@@ -168,7 +172,7 @@ var VkApiWrapper = {
     var p = self.callVkApi("groups.get", options);
     if (!silent) {
       p.fail(function () {
-        self.displayError("Не удалось получить список групп пользователя!");
+        self.settings_.errorHandler("Не удалось получить список групп пользователя!");
       });
     }
     return p;
@@ -179,7 +183,7 @@ var VkApiWrapper = {
     var p = self.callVkApi("groups.getById", options);
     if (!silent) {
       p.fail(function () {
-        self.displayError("Не удалось получить информацию о группе/странице!");
+        self.settings_.errorHandler("Не удалось получить информацию о группе/странице!");
       });
     }
     return p;
@@ -190,7 +194,7 @@ var VkApiWrapper = {
   	var p = self.callVkApi("photos.move", {owner_id: ownerId, target_album_id: targetAlbumId, photo_id: photoId});
   	if (!silent) {
   		p.fail(function(){
-  			self.displayError("Не удалось переместить фотографию!");
+  			self.settings_.errorHandler("Не удалось переместить фотографию!");
   		});
   	}
   	return p;
@@ -202,7 +206,7 @@ var VkApiWrapper = {
     if (!silent) {
       p.fail(function () {
         var str = ("screen_name" in options) ? options.screen_name : 'undefined';
-        self.displayError("Не удалось получить информацию о пользователе/группе: '" + str + "'");
+        self.settings_.errorHandler("Не удалось получить информацию о пользователе/группе: '" + str + "'");
       });
     }
     return p;
@@ -236,58 +240,6 @@ var VkApiWrapper = {
       key: key,
       value: value
     });
-  },
-
-  validateApp: function (vkSid, appLocation, delay) {
-    if (vkSid) { //looks like a valid run
-      return;
-    }
-
-    setTimeout(function () {
-      document.location.href = appLocation;
-    }, delay);
-  },
-
-  welcomeCheck: function () {
-    var d = $.Deferred();
-
-    //request isWelcomed var
-    var isWelcomedKey = "isWelcomed3";
-    VkApiWrapper.storageGet(isWelcomedKey).done(function (data) {
-      if (data[isWelcomedKey] == "1") { //already welcomed
-        //d.resolve();
-        //return;
-      }
-
-      //if not welcomed yet -> show welcome dialog
-      $("#welcome_dialog").dialog("open").on("dialogclose", function (event, ui) {
-        d.resolve();
-      });
-      VkApiWrapper.storageSet(isWelcomedKey, "1");
-    });
-
-    return d.promise();
-  },
-
-  rateRequest: function (delay) {
-    var isRatedKey = "isRated3";
-    var isWelcomedKey = "isWelcomed3";
-    var BlinkAfterDialogDelay = 2000;
-
-    setTimeout(function () {
-      VkApiWrapper.storageGet(isWelcomedKey + "," + isRatedKey).done(function (data) {
-        if ((data[isWelcomedKey] == "0") || (data[isRatedKey] == "1")) { //already rated or first run
-          return;
-        }
-
-        //if not rated yet -> show rate us dialog
-        $("#rateus_dialog").dialog("open");
-        VkApiWrapper.storageSet(isRatedKey, "1");
-
-        setTimeout(function () {
-          blinkDiv("vk_like", Settings.BlinkCount, Settings.BlinkDelay);
-        }, BlinkAfterDialogDelay);
-      });
-    }, delay);
   }
+
 };

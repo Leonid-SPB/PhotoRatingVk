@@ -9,14 +9,22 @@ requires: jQuery, highslide
 
 (function ($, hs) {
   var defaults = {
-    AddThumbDelay: 30,
+    AddThumbDelay: 10,
     AddThumbCount: 20,
-    LoadThumbDelay: 250,
+    LoadThumbDelay: 100,
+    LoadThumbSldownThresh: 10,
 
     VkPhotoPopupSettings: 'toolbar=yes,scrollbars=yes,resizable=yes,width=1024,height=600'
   };
 
+  var PluginName = 'ThumbsViewer';
+  var ThumbClass = '.ThumbsViewer-thumb_block';
+
   var thC = {
+
+    //PUBLIC:
+    //------------------------------------------------------
+
     ///initialize Thumbs Container
     init: function (opts) {
       var $this = $(this);
@@ -34,9 +42,9 @@ requires: jQuery, highslide
       data.busy_dfrd__.resolve();
       $.extend(data, defaults, opts);
 
-      $this.data('ThumbsViewer', data);
+      $this.data(PluginName, data);
       $this.addClass("ThumbsViewer-thumbs_container");
-      $this.on("click.ThumbsViewer", ".ThumbsViewer-thumb_block", function (event) {
+      $this.on("click.ThumbsViewer", ThumbClass, function (event) {
         thC.onThumbClick.call(this, event, $this);
       });
       $this.on("click.ThumbsViewer", ".ThumbsViewer_zoom-ico", function (event) {
@@ -44,86 +52,22 @@ requires: jQuery, highslide
       });
     },
 
-    ///expects object VK API image object
-    createThumb: function (vk_img) {
-      var $this = $(this);
-      var $data = $(this).data('ThumbsViewer');
-      var thumb_parent = $("<div class='ThumbsViewer-thumb_block loading' />");
-
-      var titleStr = thC.makeTitle.call(this, vk_img);
-      var captionStr = thC.makeCaption.call(this, vk_img);
-      var zoomImgSrc = thC.getSelSizeUrl(vk_img, 'y', 'x');
-      var aa = $("<a />", {
-        class: 'ThumbsViewer-hslink',
-        href: zoomImgSrc,
-        title: 'Увеличить',
-        onclick: 'return hs.expand(this, hs.config1)'
-      }).data({
-        title: titleStr,
-        caption: captionStr
-      });
-      var zoomIcon = $('<div class="ThumbsViewer_zoom-ico" />').append(aa);
-
-      thumb_parent.append(zoomIcon);
-      thumb_parent.attr("title", "Открыть оригинал фото");
-      thumb_parent.data('ThumbsViewer', {
-        vk_img: vk_img
-      });
-      thC.oncreateThumb.call(this, thumb_parent);
-      thumb_parent.appendTo($this);
-    },
-
     ///removes $thumb div from container
     removeThumb: function ($thumb) {
       if ($thumb.hasClass("selected")) {
-        var $data = $(this).data('ThumbsViewer');
+        var $data = $(this).data(PluginName);
         --$data.thumbsSelCnt__;
       }
       $thumb.remove();
     },
 
-    loadImages: function () {
-      var $this = $(this);
-      var $data = $(this).data('ThumbsViewer');
-
-      var loadImgQueue = $this.find(".ThumbsViewer-thumb_block.loading").toArray();
-
-      function loadImg__() {
-        if ($data.abortTask__ || !loadImgQueue.length) {
-          $data.busy_dfrd__.resolve();
-          return;
-        }
-
-        var thumb = $(loadImgQueue.shift());
-        if (!$.contains(document, thumb[0])) { //don't load image if element has already been removed
-          return loadImg__();
-        }
-
-        var vk_img = thumb.data('ThumbsViewer').vk_img;
-        var imgSrc = thC.getSelSizeUrl(vk_img, 'p', 'm');
-        var thumb_img = $("<img />");
-        thumb_img.on('load', function () {
-          thumb.removeClass('loading');
-          thumb.addClass('showphoto');
-          thumb.css('background-image', 'url(' + imgSrc + ')');
-          thumb_img.on('load', null);
-        });
-        thumb_img.attr("src", imgSrc);
-
-        setTimeout(function () {
-          loadImg__();
-        }, $data.LoadThumbDelay);
-      }
-
-      loadImg__();
-    },
-
-    ///thumbsAr is expected to be non empty array with elements containing .src property
-    ///returns Deferred which will be resolved when all thumbs are added to container or job is aborted
+    ///thumbsAr is expected to be non empty array of Vk API images
+    ///returns Deferred which will be resolved when all thumbs are added to the 
+    ///container or job is aborted (added != loaded)
     addThumbList: function (thumbsAr) {
       var self = this;
       var $this = $(this);
-      var $data = $this.data('ThumbsViewer');
+      var $data = $this.data(PluginName);
       var d = $.Deferred();
 
       function addThumb__(queue) {
@@ -132,7 +76,7 @@ requires: jQuery, highslide
             d.resolve();
             return;
           }
-          thC.createThumb.call(self, queue.shift());
+          thC.createThumb_.call(self, queue.shift());
         }
         setTimeout(function () {
           addThumb__(queue);
@@ -149,7 +93,7 @@ requires: jQuery, highslide
         addThumb__(thumbsAr.slice());
       });
 
-      //start loading images when all thumbnais are added to container
+      //start loading images when all thumbnais are added to the container
       d.done(function () {
         thC.loadImages.call(self);
       });
@@ -157,10 +101,10 @@ requires: jQuery, highslide
       return d.promise();
     },
 
-    ///update album map: id -> description with new records
+    ///update album map (id -> description) with new records
     updateAlbumMap: function (albumMap) {
       var $this = $(this);
-      var $data = $this.data('ThumbsViewer');
+      var $data = $this.data(PluginName);
 
       $.extend($data.albumMap, albumMap);
     },
@@ -168,7 +112,7 @@ requires: jQuery, highslide
     ///select all thumbnails in container
     selectAll: function () {
       var $this = $(this);
-      var $data = $this.data('ThumbsViewer');
+      var $data = $this.data(PluginName);
 
       if ($data.disableSel) {
         return;
@@ -176,7 +120,7 @@ requires: jQuery, highslide
 
       $data.thumbsSelCnt__ = 0;
 
-      $this.find(".ThumbsViewer-thumb_block").each(function () {
+      $this.find(ThumbClass).each(function () {
         $(this).addClass("selected");
         ++$data.thumbsSelCnt__;
       });
@@ -185,27 +129,27 @@ requires: jQuery, highslide
     ///deselect all thumbnails in container
     selectNone: function () {
       var $this = $(this);
-      var $data = $this.data('ThumbsViewer');
+      var $data = $this.data(PluginName);
 
       if ($data.disableSel) {
         return;
       }
 
       $data.thumbsSelCnt__ = 0;
-      $this.find(".ThumbsViewer-thumb_block").removeClass("selected");
+      $this.find(ThumbClass).removeClass("selected");
     },
 
     ///disable/enable selection
     selectionDisable: function (disable) {
       var $this = $(this);
-      var $data = $this.data('ThumbsViewer');
+      var $data = $this.data(PluginName);
       $data.disableSel = disable;
     },
 
     ///select all if any one is selected, deselect all if all are selected
     selectToggleAll: function () {
       var $this = $(this);
-      var $data = $this.data('ThumbsViewer');
+      var $data = $this.data(PluginName);
 
       if ($data.disableSel) {
         return;
@@ -214,7 +158,7 @@ requires: jQuery, highslide
       var thumbsSelCnt__ = 0;
       var thumbsTotal = 0;
 
-      $this.find(".ThumbsViewer-thumb_block").each(function () {
+      $this.find(ThumbClass).each(function () {
         ++thumbsTotal;
         if ($(this).hasClass("selected")) {
           ++thumbsSelCnt__;
@@ -222,10 +166,10 @@ requires: jQuery, highslide
       });
 
       if (thumbsSelCnt__ == thumbsTotal) {
-        $this.find(".ThumbsViewer-thumb_block").removeClass("selected");
+        $this.find(ThumbClass).removeClass("selected");
         $data.thumbsSelCnt__ = 0;
       } else {
-        $this.find(".ThumbsViewer-thumb_block").addClass("selected");
+        $this.find(ThumbClass).addClass("selected");
         $data.thumbsSelCnt__ = thumbsTotal;
       }
     },
@@ -233,17 +177,19 @@ requires: jQuery, highslide
     ///for currently visible on screen: select all if any one is selected, deselect all if all are selected
     selectToggleVisible: function () {
       var $this = $(this);
-      var $data = $this.data('ThumbsViewer');
+      var $data = $this.data(PluginName);
 
       if ($data.disableSel) {
         return;
       }
 
-      var $thumbs = $this.find(".ThumbsViewer-thumb_block");
+      var $thumbs = $this.find(ThumbClass);
       if (!$thumbs.length) { //no thumbs in container
         return;
       }
 
+      //calculate which thumbs are currently visible based on 
+      //scroll position and container/image geometry
       var $parentDiv = $this.parent().first();
       var divHeight = $parentDiv.innerHeight();
       var divWidth = $parentDiv.innerWidth();
@@ -272,16 +218,17 @@ requires: jQuery, highslide
         $thumbs.addClass("selected");
       }
 
-      $data.thumbsSelCnt__ = $this.find(".ThumbsViewer-thumb_block.selected").length;
+      $data.thumbsSelCnt__ = $this.find(ThumbClass + ".selected").length;
     },
 
     ///returns array of 'data' associated with thumbnails in container
-    getSelThumbsData: function () {
+    getThumbsData: function (onlySelected) {
       var thumbData = [];
+      var selector = onlySelected ? ThumbClass + ".selected" : ThumbClass;
 
-      this.find(".ThumbsViewer-thumb_block.selected").each(function () {
+      this.find(selector).each(function () {
         var $this = $(this);
-        var $data = $this.data('ThumbsViewer');
+        var $data = $this.data(PluginName);
         $data.$thumb = $this;
         thumbData.push($data);
       });
@@ -290,17 +237,17 @@ requires: jQuery, highslide
     },
 
     ///returns number of thumbnails selected
-    getSelThumbsCount: function () {
-      var $data = $(this).data('ThumbsViewer');
-
-      return $data.thumbsSelCnt__;
+    getThumbsCount: function (onlySelected) {
+      var $data = $(this).data(PluginName);
+      var len = onlySelected ? $data.thumbsSelCnt__ : this.find(ThumbClass).length;
+      return len;
     },
 
-    ///remove all thumbnails from container
+    ///remove all thumbnails from the container
     empty: function () {
       var $this = $(this);
-      var $data = $this.data('ThumbsViewer');
-      $data.abortTask__ = true; //abort job in progress(if any)
+      var $data = $this.data(PluginName);
+      $data.abortTask__ = true; //abort any job in progress(if any)
 
       hs.close();
 
@@ -317,17 +264,17 @@ requires: jQuery, highslide
       return d.promise();
     },
 
-    ///reorder thumbnails in container (straight/reverse)
+    ///reorder thumbnails in the container (straight/reverse)
     reorder: function (revSort) {
       var self = this;
       var $this = $(this);
-      var $data = $this.data('ThumbsViewer');
+      var $data = $this.data(PluginName);
 
       //if sort order changed, resort thumbs
       if ($data.revSortOrder != revSort) {
         $data.revSortOrder = revSort;
 
-        var $thumbs = $this.find(".ThumbsViewer-thumb_block");
+        var $thumbs = $this.find(ThumbClass);
         $thumbs.detach();
         var thumbsLi = $thumbs.toArray().reverse();
         for (var i = 0; i < thumbsLi.length; ++i) {
@@ -340,19 +287,99 @@ requires: jQuery, highslide
 
     //shuffle - reorder randomly
 
-    makeTitle: function (vk_img) {
+    //PROTECTED:
+    //------------------------------------------------------
+
+    ///load images for the thumbnail objects in the container
+    loadImages: function () {
+      var $this = $(this);
+      var $data = $(this).data(PluginName);
+
+      var loadImgQueue = $this.find(ThumbClass + ".loading").toArray();
+      var loadInProgressCnt = 0;
+
+      function loadImg__() {
+        //stop if no more images left or the task was aborted
+        if ($data.abortTask__ || !loadImgQueue.length) {
+          $data.busy_dfrd__.resolve();
+          return;
+        }
+
+        var thumb = $(loadImgQueue.shift());
+        if (!$.contains(document, thumb[0])) { //don't load image if element has already been removed
+          return loadImg__();
+        }
+
+        ++loadInProgressCnt;
+        var vk_img = thumb.data(PluginName).vk_img;
+        var imgSrc = thC.getSelSizeUrl(vk_img, 'p', 'm');
+        var thumb_img = $("<img />");
+        thumb_img.on('load', function () {
+          --loadInProgressCnt;
+          thumb.removeClass('loading');
+          thumb.addClass('showphoto');
+          thumb.css('background-image', 'url(' + imgSrc + ')');
+          thumb_img.on('load', null);
+        });
+        thumb_img.attr("src", imgSrc);
+        //thumb_img = null;
+
+        //timeout depends on number of images being loaded
+        var tmout = (loadInProgressCnt < $data.LoadThumbSldownThresh) ? $data.LoadThumbDelay : loadInProgressCnt * $data.LoadThumbDelay;
+        setTimeout(function () {
+          loadImg__();
+        }, tmout);
+      }
+
+      loadImg__();
+    },
+
+    ///create new thumbnail object and append to the container
+    ///expects VK API image object
+    createThumb_: function (vk_img) {
+      var $this = $(this);
+      var $data = $(this).data(PluginName);
+      var thumb_parent = $("<div class='ThumbsViewer-thumb_block loading' />");
+
+      var titleStr = thC.makeTitle_.call(this, vk_img);
+      var captionStr = thC.makeCaption_.call(this, vk_img);
+      var zoomImgSrc = thC.getSelSizeUrl(vk_img, 'y', 'x');
+      var aa = $("<a />", {
+        class: 'ThumbsViewer-hslink',
+        href: zoomImgSrc,
+        title: 'Увеличить',
+        onclick: 'return hs.expand(this, hs.config1)'
+      }).data({
+        title: titleStr,
+        caption: captionStr
+      });
+      var zoomIcon = $('<div class="ThumbsViewer_zoom-ico" />').append(aa);
+
+      thumb_parent.append(zoomIcon);
+      thumb_parent.attr("title", "Открыть оригинал фото");
+      thumb_parent.data(PluginName, {
+        vk_img: vk_img
+      });
+      thC.oncreateThumb_.call(this, thumb_parent);
+      thumb_parent.appendTo($this);
+    },
+
+    ///used by createThumb_ to create title for the photo
+    makeTitle_: function (vk_img) {
       return 'Фото %1/%2:&nbsp; &#10084; ' + vk_img.likes.count;
     },
 
-    makeCaption: function (vk_img) {
+    ///used by createThumb_ to create caption for the photo
+    makeCaption_: function (vk_img) {
       var $this = $(this);
-      var $data = $this.data('ThumbsViewer');
+      var $data = $this.data(PluginName);
 
       var album = "";
       if (vk_img.album_id in $data.albumMap) {
         album = $data.albumMap[vk_img.album_id];
       }
 
+      //caption contains album name, link to original VK photo and description
       var origUrl = "//vk.com/photo" + vk_img.owner_id + "_" + vk_img.id;
       var onClickOrigUrl = "var myWindow = window.open('" + origUrl + "', 'vk_photo', '" + $data.VkPhotoPopupSettings + "', false); myWindow.focus();";
       var caption = '\
@@ -368,6 +395,8 @@ requires: jQuery, highslide
       return caption;
     },
 
+    ///retreive from VK Api image object a link to image with desired size szLiterPref
+    /// or fall back to alternative (old size format) szLiterAlt
     getSelSizeUrl: function (vk_img, szLiterPref, szLiterAlt) {
       var src_alt = vk_img.sizes[0].src;
       for (var i = 0; i < vk_img.sizes.length; ++i) {
@@ -380,27 +409,26 @@ requires: jQuery, highslide
       return src_alt;
     },
 
-    ///createThumb() calls this function modify $thumb object before insertion to the container
-    oncreateThumb: function ($thumb) {
-      //!!!
-      var vk_img = $thumb.data('ThumbsViewer').vk_img;
+    ///createThumb_() calls this function modify $thumb object before insertion to the container
+    oncreateThumb_: function ($thumb) {
+      var vk_img = $thumb.data(PluginName).vk_img;
       var likesbox = '<div class="ui-state-default ThumbsViewer_likesBox ui-corner-br">&#10084; ' + vk_img.likes.count + '</div>';
       $thumb.append($(likesbox));
     },
 
-    ///click on thumbnail area
+    ///handle click on thumbnail area
     onThumbClick: function (event, parent) {
-      //!!!
       var $this = $(this);
-      var $data = $this.data('ThumbsViewer');
+      var $data = $this.data(PluginName);
+
+      //open original VK image in a pop-up window
       var url = "//vk.com/photo" + $data.vk_img.owner_id + "_" + $data.vk_img.id;
-      var myWindow = window.open(url, 'vk_photo', parent.data('ThumbsViewer').VkPhotoPopupSettings, false);
+      var myWindow = window.open(url, 'vk_photo', parent.data(PluginName).VkPhotoPopupSettings, false);
       myWindow.focus();
     },
 
-    ///click on zoom icon
+    ///handle click on zoom icon
     onZoomClick: function (event, parent) {
-      //!!!
       //do nothing here, using handler from <a onclick="...">
       event.stopPropagation();
       return false;

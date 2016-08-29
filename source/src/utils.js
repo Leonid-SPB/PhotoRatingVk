@@ -3,116 +3,100 @@
 */
 
 //requires jQuery, spin.js
-/* globals $, displayError, blinkDiv, Spinner, Settings, VK, html_sanitize*/
+/* globals $, Spinner, html_sanitize */
 
-function getParameterByName(name, rfr) {
-  name = name.replace(/[\[]/, "\\\[").replace(/[\]]/, "\\\]");
-  var regexS = "[\\?&]" + name + "=([^&#]*)";
-  var regex = new RegExp(regexS);
-  var results;
-  if (rfr) {
-    results = regex.exec(document.referrer);
-  } else {
-    results = regex.exec(window.location.search);
-  }
-  if (results == null)
-    return null;
-  else
-    return decodeURIComponent(results[1].replace(/\+/g, " "));
-}
-
-function displayError(eMsg, noteDivId, hideAfter) {
-  var errEntity = "<div class=\"ui-widget\"><div class=\"ui-state-error ui-corner-all\" style=\"padding: 0 .7em;\"><p><span class=\"ui-icon ui-icon-alert\" style=\"float: left; margin-right: .3em;\"></span><strong>ОШИБКА: </strong>" + eMsg + "</p></div></div>";
-  $("#" + noteDivId).empty().html(errEntity);
-
-  if (hideAfter) {
-    setTimeout(function () {
-      $("#" + noteDivId).empty();
-    }, hideAfter);
-  }
-}
-
-function displayWarn(eMsg, noteDivId, hideAfter) {
-  var errEntity = "<div class=\"ui-widget\"><div class=\"ui-state-error ui-corner-all\">" + eMsg + "</div></div>";
-  $("#" + noteDivId).empty().html(errEntity);
-
-  if (hideAfter) {
-    setTimeout(function () {
-      $("#" + noteDivId).empty();
-    }, hideAfter);
-  }
-}
-
-function sanitizeHtml(str) {
-  //fixme using real sanitizer, meanwhile assume nothing harmful could fit into 16 characters
-  if (str) {
-    return str.toString().slice(0, 20);
-  } else {
-    return "";
-  }
-
-  /*var urlTransformer, nameIdClassTransformer;
-
-  // customize if you need to filter URLs and/or ids/names/classes
-  urlTransformer = nameIdClassTransformer = function (s) {
-    return s;
-  };
-  return html_sanitize(str, urlTransformer, nameIdClassTransformer);*/
-}
-
-function showSpinner() {
-  var opts = {
-    lines: 17,
-    length: 26,
-    width: 11,
-    radius: 40,
-    scale: 2.0,
-    corners: 1,
-    color: "rgb(42, 88, 133)",
-    opacity: 1 / 4,
-    rotate: 0,
-    direction: 1,
-    speed: 0.7,
-    trail: 64,
-    fps: 20,
-    zIndex: 2e9,
-    className: 'spinner',
-    top: '50%',
-    left: '50%',
-    shadow: false,
-    hwaccel: false,
-    position: 'absolute'
-  };
-  $("body").spin(opts);
-}
-
-function hideSpinner() {
-  $("body").spin(false);
-}
-
-function blinkDiv(divId, blinks, delay) {
-  var bclass = "blink_1";
-
-  function toggleBlink(el, blinks, delay) {
-    if (!blinks) {
-      setTimeout(function () {
-        el.removeClass(bclass);
-      }, delay);
-      return;
-    }
-
-    if (el.hasClass(bclass)) {
-      el.removeClass(bclass);
+var Utils = {
+  getParameterByName: function (name, rfr) {
+    name = name.replace(/[\[]/, "\\\[").replace(/[\]]/, "\\\]");
+    var regexS = "[\\?&]" + name + "=([^&#]*)";
+    var regex = new RegExp(regexS);
+    var results;
+    if (rfr) {
+      results = regex.exec(document.referrer);
     } else {
-      el.addClass(bclass);
+      results = regex.exec(window.location.search);
     }
-    setTimeout(function () {
-      toggleBlink(el, --blinks, delay);
-    }, delay);
-  }
+    if (results == null)
+      return null;
+    else
+      return decodeURIComponent(results[1].replace(/\+/g, " "));
+  },
 
-  toggleBlink($("#" + divId), blinks, delay);
-}
+  sanitizeParameter: function (str) {
+    //fixme using real sanitizer
+    if (str) {
+      //keep only alpha-numeric characters and "._"
+      return str.toString().replace(/[^0-9a-z_.]/gi, '');
+    } else {
+      return "";
+    }
+
+    /*var urlTransformer, nameIdClassTransformer;
+
+    // customize if you need to filter URLs and/or ids/names/classes
+    urlTransformer = nameIdClassTransformer = function (s) {
+      return s;
+    };
+    return html_sanitize(str, urlTransformer, nameIdClassTransformer);*/
+  },
+
+  showSpinner: function (opts) {
+    var defaults = {
+      lines: 17,
+      length: 26,
+      width: 11,
+      radius: 40,
+      scale: 2.0,
+      corners: 1,
+      color: "rgb(42, 88, 133)",
+      opacity: 1 / 4,
+      rotate: 0,
+      direction: 1,
+      speed: 0.7,
+      trail: 64,
+      fps: 20,
+      zIndex: 2e9,
+      className: 'spinner',
+      top: '50%',
+      left: '50%',
+      shadow: false,
+      hwaccel: false,
+      position: 'absolute'
+    };
+    var opts_ = {};
+
+    $.extend(opts_, defaults, opts);
+    $("body").spin(opts_);
+  },
+
+  hideSpinner: function () {
+    $("body").spin(false);
+  },
+
+  blinkDiv: function (divId, blinks, delay) {
+    var bclass = "blink_1";
+
+    function toggleBlink(el, blinks, delay) {
+      if (!blinks) {
+        setTimeout(function () {
+          el.removeClass(bclass);
+        }, delay);
+        return;
+      }
+
+      if (el.hasClass(bclass)) {
+        el.removeClass(bclass);
+      } else {
+        el.addClass(bclass);
+      }
+      setTimeout(function () {
+        toggleBlink(el, --blinks, delay);
+      }, delay);
+    }
+
+    toggleBlink($("#" + divId), blinks, delay);
+  }
+};
 
 var RateLimit = (function () {
   //by Matteo Agosti
