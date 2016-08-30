@@ -452,6 +452,7 @@ a.ui-button:active,
 .ui-dialog .ui-dialog-titlebar button.ui-button:focus,
 .ui-dialog .ui-dialog-titlebar button.ui-button.ui-state-focus,
 .ui-dialog .ui-dialog-titlebar button.ui-button.ui-state-active,
-.ui-dialog .ui-dialog-titlebar button.ui-button.ui-state-hover  {
+.ui-dialog .ui-dialog-titlebar button.ui-button.ui-state-hover,
+.ui-dialog-content.ui-widget-content {
 	outline:none;
 }
