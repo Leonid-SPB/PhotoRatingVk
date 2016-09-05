@@ -337,6 +337,10 @@ var RPApi = {
               Settings.likedThresh = self.ratedPhotos[0].likes.count;
               photos = self.filterPhotosByRating(self.ratedPhotos, Settings.likedThresh);
               self.$ratingThreshSpin.spinner("value", Settings.likedThresh);
+            } else {
+              //update liked thresh to actual value
+              Settings.likedThresh = self.ratedPhotos[self.ratedPhotos.length - 1].likes.count;
+              self.$ratingThreshSpin.spinner("value", Settings.likedThresh);
             }
 
             //push photos to ThumbsViewer

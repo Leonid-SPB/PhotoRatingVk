@@ -22,6 +22,7 @@
   <script src="//ajax.googleapis.com/ajax/libs/jqueryui/1.11.4/jquery-ui.min.js"></script>
   <script src="//vk.com/js/api/xd_connection.js?2" type="text/javascript"></script>
 
+  <!--JSFILES-->
   <script src="spin.js" type="text/javascript" charset="utf-8"></script>
   <script src="utils.js" type="text/javascript" charset="utf-8"></script>
   <script src="vkApiWrapper.js" type="text/javascript" charset="utf-8"></script>
@@ -30,6 +31,7 @@
   <script src="highslide.config.js" type="text/javascript" charset="utf-8"></script>
   <script src="thumbsContainer.js" type="text/javascript" charset="utf-8"></script>
   <script src="photoRating.js" type="text/javascript" charset="utf-8"></script>
+  <!--EOF-JSFILES-->
 </head>
 
 <body style="height: 800px;">
@@ -43,34 +45,38 @@
     </a>
   </div>
 
-  <br />
-  <div style="width: 95%; text-align: center; margin-left: auto; margin-right: auto;">
-    <div id="welcome_dialog" title="Добро Пожаловать!" style="display: none;">
-      <div style="display: table">
-        <div style="display: table-cell; padding-right: 10px">
-          <img src="blue-heart150.png">
-        </div>
-        <div style="display: table-cell; vertical-align:middle">
-          <p class="welcome_p">Спасибо, что установили приложение <span style="font-weight: bold">&quot;Рейтинг фото&quot;</span>!</p>
-          <p class="welcome_p">Ознакомиться с возможностями приложения можно в разделе <a href="https://vk.com/app5597335?w=page-1005597335_52791001" target="_top"><span class="italic_bold">Помощь</span></a> (ссылка сверху).</p>
-          <p class="welcome_p">Приятной работы!</p>
-        </div>
+  <div id="welcome_dialog" title="Добро Пожаловать!" style="display: none;">
+    <div style="display: table">
+      <div style="display: table-cell; padding-right: 10px">
+        <img src="blue-heart150.png">
+      </div>
+      <div style="display: table-cell; vertical-align:middle">
+        <p class="welcome_p">Спасибо, что установили приложение
+          <span style="font-weight: bold">&quot;Рейтинг фото&quot;</span>!</p>
+        <p class="welcome_p">Ознакомиться с возможностями приложения можно в разделе
+          <a href="https://vk.com/app5597335?w=page-1005597335_52791001" target="_top">
+            <span class="italic_bold">Помощь</span>
+          </a> (ссылка сверху).</p>
+        <p class="welcome_p">Приятной работы!</p>
       </div>
     </div>
+  </div>
 
-    <div id="rateus_dialog" title="Рейтинг готов!" style="display: none;">
-      <div style="display: table">
-        <div style="display: table-cell; padding-right: 10px">
-          <img src="blue-heart150.png">
-        </div>
-        <div style="display: table-cell; vertical-align:middle">
-          <p class="welcome_p">Оцените приложение, если оно Вам понравилось!</p>
-          <p class="welcome_p">Делитесь лучшими фото с друзьями кнопкой <span class="italic_bold">&quot;Сохранить на стену&quot;</span>!</p>
-        </div>
+  <div id="rateus_dialog" title="Рейтинг готов!" style="display: none;">
+    <div style="display: table">
+      <div style="display: table-cell; padding-right: 10px">
+        <img src="blue-heart150.png">
+      </div>
+      <div style="display: table-cell; vertical-align:middle">
+        <p class="welcome_p">Оцените приложение, если оно Вам понравилось!</p>
+        <p class="welcome_p">Делитесь лучшими фото с друзьями кнопкой
+          <span class="italic_bold">&quot;Сохранить на стену&quot;</span>!</p>
       </div>
     </div>
+  </div>
 
-    <div style="width: 100%;text-align: left" class="clear_fix">
+  <div style="width: 95%; text-align: center; margin-left: auto; margin-right: auto; margin-top: 30px; margin-bottom: 20px">
+    <div style="width: 100%; text-align: left">
       <form name="Form1" action="" onsubmit="return false;">
         <div>
           <label for="vkUserList">
@@ -99,7 +105,7 @@
       </form>
     </div>
 
-    <div style="width: 100%; margin-top: 10px" class="clear_fix">
+    <div style="width: 100%; margin-top: 10px">
       <div style="float: left;">
         <button id="goButton" disabled=1 type="button" onclick="RPApi.onGoButton();">Рейтинг!</button>
       </div>
@@ -109,8 +115,7 @@
     </div>
     <div style="margin-top: 5px" id="NoteField"></div>
     <div style="margin-top: 5px" id="globalErrorBox"></div>
-    <br />
-    <div style="width: 100%; text-align: left" class="clear_fix">
+    <div style="width: 100%; text-align: left">
       <div style="float: left; padding-top: 3px">
         <strong>Фотографий всего/рейтинговых/отобрано:
           <span id="totalPhotosNum">0</span>/<span id="ratedPhotosNum">0</span>/<span id="chosenPhotosNum">0</span>.</strong>
@@ -120,20 +125,22 @@
         <input class="no_glow_on_focus" id="RatingThreshold" value="1" size="3">
       </div>
     </div>
-    <br />
   </div>
 
   <hr />
-  <div style="width: 100%; height: 550px; overflow : auto;" class="clear_fix">
+  <div style="width: 100%; height: 550px; overflow : auto;">
     <ul id="thumbs_container">&nbsp;</ul>
   </div>
   <hr />
 
-  <div style="width: 320px; display: table; margin-top: 20px; margin-left: auto; margin-right: auto;">
-    <div style="display: table-cell" id="vk_like"></div>
-    <div style="display: table-cell; vertical-align:middle"><a style="color: #2a5885; text-decoration: none; cursor: pointer" href="//vk.com/id105876" target="_top">&copy; Leonid Azarenkov</a></div>
+  <div class="footer">
+    <div class="footer-table">
+      <div class="footer-table-cell" style="width: 180px" id="vk_like"></div>
+      <div class="footer-table-cell" style="width: 150px">
+        <a style="color: #2a5885; cursor: pointer" href="//vk.com/id105876" target="_top">&copy; Leonid Azarenkov</a>
+      </div>
+    </div>
   </div>
-  <div id="addme"></div>
 </body>
 
 </html>
