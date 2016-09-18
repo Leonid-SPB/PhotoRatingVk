@@ -2,29 +2,70 @@
 	Licensed under the MIT license
 */
 
-//requires jQuery, utils(RateLimit, displayError), Vk API
 /* globals $, Utils, Settings, VK, VkApiWrapper */
 
 var VkAppUtils = {
-  displayError: function (eMsg, noteDivId, hideAfter) {
-    var errEntity = "<div class=\"ui-widget\"><div class=\"ui-state-error ui-corner-all\" style=\"padding: 0 .7em;\"><p><span class=\"ui-icon ui-icon-alert\" style=\"float: left; margin-right: .3em;\"></span><strong>ОШИБКА: </strong>" + eMsg + "</p></div></div>";
-    $("#" + noteDivId).empty().html(errEntity);
+  displayError: function (eMsg, errDivId, hideAfter) {
+    var errEntity = "<div class='ui-widget'><div class='ui-state-error ui-corner-all' style='padding: 0 .7em;'><p><span class='ui-icon ui-icon-alert' style='float: left; margin-right: .3em;'></span><strong>ОШИБКА: </strong>" + eMsg + "</p></div></div>";
+    var dataKey = "displayError";
+    $("#" + errDivId).empty().hide(0).html(errEntity).show("highlight");
+
+    var $data = $("#" + errDivId).data(dataKey);
+    if ($data && $data.tm) {
+      clearTimeout($data.tm);
+      $data.tm = null;
+    }
 
     if (hideAfter) {
-      setTimeout(function () {
-        $("#" + noteDivId).empty();
+      var tm_ = setTimeout(function () {
+        $("#" + errDivId).hide("fade");
       }, hideAfter);
+      $("#" + errDivId).data(dataKey, {
+        tm: tm_
+      });
     }
   },
 
-  displayWarn: function (eMsg, noteDivId, hideAfter) {
-    var errEntity = "<div class=\"ui-widget\"><div class=\"ui-state-error ui-corner-all\">" + eMsg + "</div></div>";
-    $("#" + noteDivId).empty().html(errEntity);
+  displayWarn: function (eMsg, warnDivId, hideAfter) {
+    var warnEntity = "<div class='ui-widget'><div class='ui-state-error ui-corner-all' style='padding: 0.7em; text-align: center'>" + eMsg + "</div></div>";
+    $("#" + warnDivId).empty().hide(0).html(warnEntity).show("highlight");
+    //var dataKey = "displayWarn";
+    var dataKey = "displayError";
+
+    var $data = $("#" + warnDivId).data(dataKey);
+    if ($data && $data.tm) {
+      clearTimeout($data.tm);
+      $data.tm = null;
+    }
 
     if (hideAfter) {
-      setTimeout(function () {
-        $("#" + noteDivId).empty();
+      var tm_ = setTimeout(function () {
+        $("#" + warnDivId).hide("fade");
       }, hideAfter);
+      $("#" + warnDivId).data(dataKey, {
+        tm: tm_
+      });
+    }
+  },
+
+  displayNote: function (eMsg, noteDivId, hideAfter) {
+    var noteEntity = "<div class='ui-widget'><div class='ui-state-highlight ui-corner-all' style='padding: 0 .7em;'><p><span class='ui-icon ui-icon-info' style='float: left; margin-right: .3em;'></span>" + eMsg + "</p></div></div>";
+    $("#" + noteDivId).empty().hide(0).html(noteEntity).show("highlight");
+    var dataKey = "displayNote";
+
+    var $data = $("#" + noteDivId).data(dataKey);
+    if ($data && $data.tm) {
+      clearTimeout($data.tm);
+      $data.tm = null;
+    }
+
+    if (hideAfter) {
+      var tm_ = setTimeout(function () {
+        $("#" + noteDivId).hide("fade");
+      }, hideAfter);
+      $("#" + noteDivId).data(dataKey, {
+        tm: tm_
+      });
     }
   },
 
@@ -119,15 +160,17 @@ var VkAppUtils = {
       photosCount += response.count;
     }
 
-    d1.done(updCnt);
-    d2.done(updCnt);
-    d3.done(updCnt);
-    d4.done(updCnt);
+    function onFail(error) {
+      ddd.reject(error);
+    }
+
+    d1.done(updCnt).fail(onFail);
+    d2.done(updCnt).fail(onFail);
+    d3.done(updCnt).fail(onFail);
+    d4.done(updCnt).fail(onFail);
 
     $.when(d1, d2, d3, d4).done(function () {
       ddd.resolve(photosCount);
-    }).fail(function () {
-      ddd.reject();
     });
 
     return ddd.promise();
@@ -176,8 +219,8 @@ var VkAppUtils = {
             ddd.resolve(photos);
           }
         }
-      ).fail(function () {
-        ddd.reject();
+      ).fail(function (error) {
+        ddd.reject(error);
       });
     }
 
@@ -227,17 +270,51 @@ var VkAppUtils = {
             getNextChunk__(offset + response.items.length, countLeft - response.items.length);
           } else {
             //finally resolve with the list of retreived photos
-            ddd.resolve(photos);
+            ddd.resolve(photos, response.count);
           }
         }
-      ).fail(function () {
-        ddd.reject();
+      ).fail(function (error) {
+        ddd.reject(error);
       });
     }
 
     getNextChunk__(offset, maxCount);
 
     return ddd.promise();
+  },
+
+  queryAlbumList: function (options) {
+    var d = $.Deferred();
+
+    VkApiWrapper.queryAlbums(options).done(function (albums) {
+      albums = albums.items;
+
+      for (var i = 0; i < albums.length; ++i) {
+        var title = $("<div>").html(albums[i].title).text();
+        if (title.length > Settings.MaxOptionLength) {
+          title = title.substring(0, Settings.MaxOptionLength) + "...";
+        }
+        albums[i].title = title;
+      }
+
+      //sort albums by name
+      albums = albums.sort(function (a, b) {
+        var ta = a.title.toLowerCase();
+        var tb = b.title.toLowerCase();
+        if (ta < tb) {
+          return -1;
+        } else if (ta > tb) {
+          return 1;
+        }
+        return 0;
+      });
+
+      d.resolve(albums);
+    }).fail(function (error) {
+      d.reject(error);
+    });
+
+    return d.promise();
   },
 
   //creates map: album id -> album.title
@@ -263,8 +340,8 @@ var VkAppUtils = {
       }
 
       ddd.resolve(albumMap);
-    }).fail(function () {
-      ddd.reject();
+    }).fail(function (error) {
+      ddd.reject(error);
     });
 
     return ddd.promise();
@@ -274,9 +351,13 @@ var VkAppUtils = {
   resolveUidGid: function (str) {
     var ddd = $.Deferred();
 
-    function onFail() {
-      VkAppUtils.displayError("Не удалось получить информацию о пользователе/группе: '" + str + "'", "globalErrorBox", Settings.ErrorHideAfter);
-      ddd.reject();
+    function onFail(error) {
+      if (!("error_msg" in error)) {
+        error.error_msg = "Не удалось получить информацию о пользователе/группе: '" + str + "'";
+      }
+
+      VkAppUtils.displayError("Не удалось получить информацию о пользователе/группе: '" + str + "'", "GlobalErrorBox", Settings.ErrorHideAfter);
+      ddd.reject(error);
     }
 
     VkApiWrapper.resolveScreenName({
@@ -292,7 +373,7 @@ var VkAppUtils = {
             ddd.resolve(friends[0], true);
           } else {
             //resolved, but inactive user was filtered out
-            onFail();
+            onFail({});
           }
         }).fail(onFail);
       } else if ((resp.type == "group") || (resp.type == "page")) {
@@ -304,12 +385,12 @@ var VkAppUtils = {
             ddd.resolve(groups[0], false);
           } else {
             //resolved, but inactive group was filtered out
-            onFail();
+            onFail({});
           }
         }).fail(onFail);
       } else {
         //unknown type
-        onFail();
+        onFail({});
         return;
       }
     }).fail(onFail);

@@ -1,7 +1,8 @@
 pending:
+) update components (take from MovePhoto)
 ) video "how to use"
-) donate button (disable ads)
 ) style tuning: better loadding gif, fonts, etc...
+) filter by album?
 
 done:
 x) update wiki page and tutorial for new users
@@ -33,5 +34,5 @@ no go:
 ) use "enter" to start
 ) improve gallery navigation buttons
 ) click anywhere to close preview
-) filter by album?
 ) click on image to open gallery, click on "zoom" icon to open original photo
+) donate button (disable ads)

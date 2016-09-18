@@ -53,7 +53,7 @@ var RPApi = {
   goBtnTooltipSave: "Сохранить рейтинг на стену",
 
   init: function () {
-    var self = this;
+    var self = RPApi;
     self.vkUserList = document.getElementById("vkUserList");
     self.vkGroupList = document.getElementById("vkGroupList");
     self.vkIdEdit = document.getElementById("vkIdEdit");
@@ -62,6 +62,22 @@ var RPApi = {
     self.$ratedPhotosSpan = $("#ratedPhotosNum");
     self.$chosenPhotosSpan = $("#chosenPhotosNum");
     self.$ratingThreshSpin = $("#RatingThreshold");
+
+    //assign event handlers
+    $(self.vkUserList).change(self.onUserChanged);
+    $(self.vkIdEdit).change(self.onUidGidChanged);
+    $(self.vkGroupList).change(self.onGroupChanged);
+    $("#goButton").click(self.onGoButtonClick);
+    $("#ThumbsViewer").on("click.RPApi", ".ThumbsViewer-thumb", function (event, parent) {
+      var $this = $(this);
+      var PluginName = 'ThumbsViewer';
+      var $data = $this.data(PluginName);
+
+      //open original VK image in a pop-up window
+      var url = "//vk.com/photo" + $data.vk_img.owner_id + "_" + $data.vk_img.id;
+      var myWindow = window.open(url, 'vk_photo', $("#ThumbsViewer").data(PluginName).VkPhotoPopupSettings, false);
+      myWindow.focus();
+    });
 
     self.$ratingThreshSpin.on("spin", function (event, ui) {
       RPApi.onThreshSpinChange.call(self);
@@ -149,7 +165,7 @@ var RPApi = {
         self.disableControls(0);
       }).done(function () {
         //if uidGid was valid, start building photo rating automatically
-        self.onGoButton(true);
+        self.onGoButtonClick(true);
       });
     }).fail(function () {
       //initialization failed, disable controls
@@ -178,7 +194,7 @@ var RPApi = {
   },
 
   onThreshSpinChange: function () {
-    var self = this;
+    var self = RPApi;
     Settings.likedThresh = +self.$ratingThreshSpin.spinner("value");
 
     function refreshRating() {
@@ -188,7 +204,7 @@ var RPApi = {
       }
 
       //remove all photos from container
-      $("#thumbs_container").ThumbsViewer("empty");
+      $("#ThumbsViewer").ThumbsViewer("empty");
 
       //make new list of photos based on current likes threshold
       var photos = self.filterPhotosByRating(self.ratedPhotos, Settings.likedThresh);
@@ -201,8 +217,8 @@ var RPApi = {
       self.$chosenPhotosSpan.text(photos.length);
 
       //add photos to the container
-      $("#thumbs_container").ThumbsViewer("updateAlbumMap", self.albumMap);
-      $("#thumbs_container").ThumbsViewer("addThumbList", photos);
+      $("#ThumbsViewer").ThumbsViewer("updateAlbumMap", self.albumMap);
+      $("#ThumbsViewer").ThumbsViewer("addThumbList", photos);
     }
 
     //cancell previously schedulled refreshRating()
@@ -215,7 +231,7 @@ var RPApi = {
   },
 
   disableControls: function (disable) {
-    var self = this;
+    var self = RPApi;
     var dval = 0;
     var dstr = "enable";
     if (disable) {
@@ -230,8 +246,8 @@ var RPApi = {
     self.$ratingThreshSpin.spinner(dstr);
   },
 
-  onGoButton: function (noSpinner) {
-    var self = this;
+  onGoButtonClick: function (noSpinner) {
+    var self = RPApi;
 
     //save search result on user's wall
     if ($("#goButton").button("option", "label") == self.goBtnLabelSave) {
@@ -240,7 +256,7 @@ var RPApi = {
     }
 
     self.disableControls(1);
-    $("#thumbs_container").ThumbsViewer("empty");
+    $("#ThumbsViewer").ThumbsViewer("empty");
     self.$progressBar.progressbar("value", 0);
     self.$totalPhotosSpan.text("0");
     self.$chosenPhotosSpan.text("0");
@@ -327,7 +343,7 @@ var RPApi = {
 
             //push album map to ThumbsViewer, map will be used for image captions
             self.albumMap = albumMap;
-            $("#thumbs_container").ThumbsViewer("updateAlbumMap", self.albumMap);
+            $("#ThumbsViewer").ThumbsViewer("updateAlbumMap", self.albumMap);
 
             //filter photos by rating threshold
             var photos = self.filterPhotosByRating(self.ratedPhotos, Settings.likedThresh);
@@ -345,7 +361,7 @@ var RPApi = {
 
             //push photos to ThumbsViewer
             self.$chosenPhotosSpan.text(photos.length);
-            $("#thumbs_container").ThumbsViewer("addThumbList", photos).done(function () {
+            $("#ThumbsViewer").ThumbsViewer("addThumbList", photos).done(function () {
               //job is done!
               self.busyFlag = false;
               Utils.hideSpinner();
@@ -381,7 +397,7 @@ var RPApi = {
 
   //resolve user/group by screen_name
   resolveUidGid: function (str) {
-    var self = this;
+    var self = RPApi;
     var ddd = $.Deferred();
 
     str = str.trim();
@@ -432,7 +448,7 @@ var RPApi = {
   //post a link to the current rating to user wall
   //so friends can see the same rating when they open the application
   wallPostResults: function () {
-    var self = this;
+    var self = RPApi;
     var message;
     var subj;
 
@@ -510,7 +526,7 @@ $(function () {
 
   VkAppUtils.validateApp(Settings.vkSid, Settings.VkAppLocation, Settings.RedirectDelay);
 
-  $("#thumbs_container").ThumbsViewer({
+  $("#ThumbsViewer").ThumbsViewer({
     disableSel: true
   });
   $("#Progressbar").progressbar({

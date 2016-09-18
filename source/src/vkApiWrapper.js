@@ -2,7 +2,6 @@
 	Licensed under the MIT license
 */
 
-//requires jQuery, utils(RateLimit, displayError), Vk API
 /* globals $, RateLimit, VK*/
 
 var VkApiWrapper = {
@@ -51,12 +50,15 @@ var VkApiWrapper = {
           //check if api call is still in progress
           if (d.state() === "pending") {
             if (retries-- > 0) {
-              console.log("VkApiWrapper: VK.api call timeout, rescheduling request");
+              console.log("VkApiWrapper: VK.API call timeout, rescheduling request");
               timeout *= self.settings_.apiTmoutMultiplier;
               scheduleVkApiMethod();
             } else {
-              console.log("VkApiWrapper: VK.api call timeout, all retries failed");
-              d.reject();
+              var e = {
+                error_msg: "VK.API call timeout, all retries failed"
+              };
+              console.log(e.error_msg);
+              d.reject(e);
             }
           }
 
@@ -75,8 +77,11 @@ var VkApiWrapper = {
             console.log("VkApiWrapper: " + data.error.error_msg);
             d.reject(data.error);
           } else {
-            console.log("VkApiWrapper: Unknow error!");
-            d.reject(null);
+            var e = {
+              error_msg: "VK.API call failed, unknow error!"
+            };
+            console.log(e.error_msg);
+            d.reject(e);
           }
         });
       });
@@ -89,24 +94,36 @@ var VkApiWrapper = {
 
   wallPost: function (options, silent) {
     var self = this;
-    var p = self.callVkApi("wall.post", options);
-    if (!silent) {
-      p.fail(function () {
-        self.settings_.errorHandler("Не удалось создать запись на стене!");
-      });
-    }
-    return p;
+    var d = $.Deferred();
+
+    self.callVkApi("wall.post", options).fail(function (error) {
+      error.error_msg = "Не удалось создать запись на стене!<br /><small>" + error.error_msg + "</small>";
+      if (!silent) {
+        self.settings_.errorHandler(error.error_msg);
+      }
+      d.reject(error);
+    }).done(function (resp) {
+      d.resolve(resp);
+    });
+
+    return d.promise();
   },
 
   queryAlbums: function (options, silent) {
     var self = this;
-    var p = self.callVkApi("photos.getAlbums", options);
-    if (!silent) {
-      p.fail(function () {
-        self.settings_.errorHandler("Не удалось получить список альбомов!");
-      });
-    }
-    return p;
+    var d = $.Deferred();
+
+    self.callVkApi("photos.getAlbums", options).fail(function (error) {
+      error.error_msg = "Не удалось получить список альбомов!<br /><small>" + error.error_msg + "</small>";
+      if (!silent) {
+        self.settings_.errorHandler(error.error_msg);
+      }
+      d.reject(error);
+    }).done(function (resp) {
+      d.resolve(resp);
+    });
+
+    return d.promise();
   },
 
   queryPhotos: function (options, silent) {
@@ -124,92 +141,187 @@ var VkApiWrapper = {
         };
         d.resolve(resp);
       } else {
+        error.error_msg = "Не удалось получить список фотографий из выбранного альбома!<br /><small>" + error.error_msg + "</small>";
         if (!silent) {
-          self.settings_.errorHandler("Не удалось получить список фотографий из выбранного альбома!");
+          self.settings_.errorHandler(error.error_msg);
         }
-        d.reject();
+        d.reject(error);
       }
     });
 
-    return d;
+    return d.promise();
   },
 
   queryAllPhotos: function (options, silent) {
     var self = this;
-    var p = self.callVkApi("photos.getAll", options);
-    if (!silent) {
-      p.fail(function () {
-        self.settings_.errorHandler("Не удалось получить список фотографий пользователя или группы!");
-      });
-    }
-    return p;
+    var d = $.Deferred();
+
+    self.callVkApi("photos.getAll", options).fail(function (error) {
+      error.error_msg = "Не удалось получить список фотографий пользователя или группы!<br /><small>" + error.error_msg + "</small>";
+      if (!silent) {
+        self.settings_.errorHandler(error.error_msg);
+      }
+      d.reject(error);
+    }).done(function (resp) {
+      d.resolve(resp);
+    });
+
+    return d.promise();
   },
 
   queryFriends: function (options, silent) {
     var self = this;
-    var p = self.callVkApi("friends.get", options);
-    if (!silent) {
-      p.fail(function () {
-        self.settings_.errorHandler("Не удалось получить список друзей!");
-      });
-    }
-    return p;
+    var d = $.Deferred();
+
+    self.callVkApi("friends.get", options).fail(function (error) {
+      error.error_msg = "Не удалось получить список друзей!<br /><small>" + error.error_msg + "</small>";
+      if (!silent) {
+        self.settings_.errorHandler(error.error_msg);
+      }
+      d.reject(error);
+    }).done(function (resp) {
+      d.resolve(resp);
+    });
+
+    return d.promise();
   },
 
   queryUser: function (options, silent) {
     var self = this;
-    var p = self.callVkApi("users.get", options);
-    if (!silent) {
-      p.fail(function () {
-        self.settings_.errorHandler("Не удалось получить информацию о пользователе!");
-      });
-    }
-    return p;
+    var d = $.Deferred();
+
+    self.callVkApi("users.get", options).fail(function (error) {
+      error.error_msg = "Не удалось получить информацию о пользователе!<br /><small>" + error.error_msg + "</small>";
+      if (!silent) {
+        self.settings_.errorHandler(error.error_msg);
+      }
+      d.reject(error);
+    }).done(function (resp) {
+      d.resolve(resp);
+    });
+
+    return d.promise();
   },
 
   queryUserGroups: function (options, silent) {
     var self = this;
-    var p = self.callVkApi("groups.get", options);
-    if (!silent) {
-      p.fail(function () {
-        self.settings_.errorHandler("Не удалось получить список групп пользователя!");
-      });
-    }
-    return p;
+    var d = $.Deferred();
+
+    self.callVkApi("groups.get", options).fail(function (error) {
+      error.error_msg = "Не удалось получить список групп пользователя!<br /><small>" + error.error_msg + "</small>";
+      if (!silent) {
+        self.settings_.errorHandler(error.error_msg);
+      }
+      d.reject(error);
+    }).done(function (resp) {
+      d.resolve(resp);
+    });
+
+    return d.promise();
   },
 
   queryGroup: function (options, silent) {
     var self = this;
-    var p = self.callVkApi("groups.getById", options);
-    if (!silent) {
-      p.fail(function () {
-        self.settings_.errorHandler("Не удалось получить информацию о группе/странице!");
-      });
-    }
-    return p;
+    var d = $.Deferred();
+
+    self.callVkApi("groups.getById", options).fail(function (error) {
+      error.error_msg = "Не удалось получить информацию о группе/странице!<br /><small>" + error.error_msg + "</small>";
+      if (!silent) {
+        self.settings_.errorHandler(error.error_msg);
+      }
+      d.reject(error);
+    }).done(function (resp) {
+      d.resolve(resp);
+    });
+
+    return d.promise();
   },
 
-  /*movePhoto: function(ownerId, targetAlbumId, photoId){
-  	var self = this;
-  	var p = self.callVkApi("photos.move", {owner_id: ownerId, target_album_id: targetAlbumId, photo_id: photoId});
-  	if (!silent) {
-  		p.fail(function(){
-  			self.settings_.errorHandler("Не удалось переместить фотографию!");
-  		});
-  	}
-  	return p;
-  },*/
+  createAlbum: function (options, silent) {
+    var self = this;
+    var d = $.Deferred();
+
+    self.callVkApi("photos.createAlbum", options).fail(function (error) {
+      error.error_msg = "Не удалось создать альбом!<br /><small>" + error.error_msg + "</small>";
+      if (!silent) {
+        self.settings_.errorHandler(error.error_msg);
+      }
+      d.reject(error);
+    }).done(function (resp) {
+      d.resolve(resp);
+    });
+
+    return d.promise();
+  },
+
+  movePhoto: function (options, silent) {
+    var self = this;
+    var d = $.Deferred();
+
+    self.callVkApi("photos.move", options).fail(function (error) {
+      error.error_msg = "Не удалось переместить фотографию!<br /><small>" + error.error_msg + "</small>";
+      if (!silent) {
+        self.settings_.errorHandler(error.error_msg);
+      }
+      d.reject(error);
+    }).done(function (resp) {
+      d.resolve(resp);
+    });
+
+    return d.promise();
+  },
+
+  movePhotoList: function (ownerId, targetAlbumId, photoIds, silent) {
+    var self = this;
+    var d = $.Deferred();
+
+    // jshint multistr:true
+    var code_ = "\
+var oid=%1,tid=%2,phl=[%3],rsp=[],i=0;\n\
+while (i < phl.length) {\n\
+rsp.push(API.photos.move({\n\
+owner_id: oid,\n\
+target_album_id: tid,\n\
+photo_id: phl[i]\n\
+}));\n\
+i = i + 1;\n\
+}\n\
+return rsp;";
+
+    var code = code_.replace("%1", ownerId);
+    code = code.replace("%2", targetAlbumId);
+    code = code.replace("%3", photoIds.join());
+
+    self.callVkApi("execute", {
+      code: code
+    }).fail(function (error) {
+      error.error_msg = "Не удалось переместить фотографии!<br /><small>" + error.error_msg + "</small>";
+      if (!silent) {
+        self.settings_.errorHandler(error.error_msg);
+      }
+      d.reject(error);
+    }).done(function (resp) {
+      d.resolve(resp);
+    });
+
+    return d.promise();
+  },
 
   resolveScreenName: function (options, silent) {
     var self = this;
-    var p = self.callVkApi("utils.resolveScreenName", options);
-    if (!silent) {
-      p.fail(function () {
-        var str = ("screen_name" in options) ? options.screen_name : 'undefined';
-        self.settings_.errorHandler("Не удалось получить информацию о пользователе/группе: '" + str + "'");
-      });
-    }
-    return p;
+    var d = $.Deferred();
+
+    self.callVkApi("utils.resolveScreenName", options).fail(function (error) {
+      error.error_msg = "Не удалось получить информацию о пользователе/группе:<br /><small>" + error.error_msg + "</small>";
+      if (!silent) {
+        self.settings_.errorHandler(error.error_msg);
+      }
+      d.reject(error);
+    }).done(function (resp) {
+      d.resolve(resp);
+    });
+
+    return d.promise();
   },
 
   storageGet: function (keys) {
@@ -218,7 +330,7 @@ var VkApiWrapper = {
     this.callVkApi("storage.get", {
       keys: keys
     }).fail(function (error) {
-      d.reject();
+      d.reject(error);
     }).done(function (resp) {
       var myresp = {};
 
@@ -226,7 +338,7 @@ var VkApiWrapper = {
         myresp[keys[i]] = "";
       }
 
-      for (var i = 0; i < resp.length; ++i) {
+      for (i = 0; i < resp.length; ++i) {
         myresp[resp[i].key] = resp[i].value;
       }
       d.resolve(myresp);

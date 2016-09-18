@@ -13,6 +13,7 @@
   <meta http-equiv="pragma" content="no-cache" />
   <title>Рейтинг фото</title>
 
+  <link href="normalize.css" rel="stylesheet" type="text/css" />
   <link rel="stylesheet" href="//ajax.googleapis.com/ajax/libs/jqueryui/1.11.4/themes/cupertino/jquery-ui.min.css">
   <link href="jquery-ui.theme.css" rel="stylesheet" type="text/css" />
   <link href="photoRating.css" rel="stylesheet" type="text/css" />
@@ -75,61 +76,58 @@
     </div>
   </div>
 
-  <div style="width: 95%; text-align: center; margin-left: auto; margin-right: auto; margin-top: 30px; margin-bottom: 20px">
-    <div style="width: 100%; text-align: left">
-      <form name="Form1" action="" onsubmit="return false;">
+  <div class="MainForm-body">
+    <form name="Form1" class="MainForm" action="" onsubmit="return false;">
+      <div class="MainForm-body-div">
         <div>
-          <label for="vkUserList">
-            <strong>Пользователь:</strong>
-          </label>
-          <select class="ui-corner-tl ui-corner-bl ui-widget ui-widget-content no_glow_on_focus" name="vkUserList" size="1" id="vkUserList" onchange="RPApi.onUserChanged();">
+          <label for="vkUserList">Пользователь:</label>
+          <select class="ui-corner-tl ui-corner-bl ui-widget ui-widget-content" size="1" id="vkUserList">
             <option value="">&nbsp;</option>
             <option value="self">Я</option>
-          </select> &nbsp;
-          <strong>или</strong> &nbsp;
-          <label for="vkIdEdit">
-            <strong>ID:</strong>
-          </label>
-          <input class="ui-widget ui-widget-content ui-corner-all no_glow_on_focus" style="padding-right: 0.5em; text-align: right;" name="vkIdEdit" type="text" id="vkIdEdit" onchange="RPApi.onUidGidChanged()" />
+          </select>
+          &nbsp; <strong>или</strong> &nbsp;
+          <label for="vkIdEdit">ID:</label>
+          <input class="ui-widget ui-widget-content ui-corner-all" style="padding-right: 0.5em; text-align: right;" id="vkIdEdit" type="text" title="Введите идентификатор пользователя или группы. Например: tproger, club32411977, durov, id105876"/>
         </div>
         <div style="margin-top: 10px">
-          &nbsp;
-          <strong>или</strong> &nbsp;
-          <label for="vkGroupList">
-            <strong>Группа:</strong>
-          </label>
-          <select class="ui-corner-tl ui-corner-bl ui-widget ui-widget-content no_glow_on_focus" name="vkGroupList" size="1" id="vkGroupList" onchange="RPApi.onGroupChanged();">
+          &nbsp; <strong>или</strong> &nbsp;
+          <label for="vkGroupList">Группа:</label>
+          <select class="ui-corner-tl ui-corner-bl ui-widget ui-widget-content" name="vkGroupList" size="1" id="vkGroupList">
             <option value="">&nbsp;</option>
           </select>
         </div>
-      </form>
-    </div>
+      </div>
 
-    <div style="width: 100%; margin-top: 10px">
-      <div style="float: left;">
-        <button id="goButton" disabled=1 type="button" onclick="RPApi.onGoButton();">Рейтинг!</button>
+      <div class="MainForm-body-div">
+        <div style="float: left;">
+          <button id="goButton" disabled=1 type="button">Рейтинг!</button>
+        </div>
+        <div style="overflow: hidden;">
+          <div id="Progressbar"></div>
+        </div>
       </div>
-      <div style="overflow: hidden;">
-        <div id="Progressbar"></div>
+
+      <div class="MainForm-body-div" style="display: table">
+        <div class="MainForm-body-div-col" style="text-align: left">
+          <label>Фотографий всего/рейтинговых/отобрано:</label>
+          <strong>
+            <span id="totalPhotosNum">0</span>/<span id="ratedPhotosNum">0</span>/<span id="chosenPhotosNum">0</span>.
+          </strong>
+        </div>
+        <div class="MainForm-body-div-col" style="text-align: right">
+          <label>Отображать фото с рейтингом выше:</label>
+          <input id="RatingThreshold" value="1" size="3">
+        </div>
       </div>
-    </div>
-    <div style="width: 100%; text-align: left">
-      <div style="float: left; padding-top: 3px">
-        <strong>Фотографий всего/рейтинговых/отобрано:
-          <span id="totalPhotosNum">0</span>/<span id="ratedPhotosNum">0</span>/<span id="chosenPhotosNum">0</span>.</strong>
-      </div>
-      <div style="overflow: hidden; text-align: right">
-        <strong>Отображать фото с рейтингом выше:</strong>
-        <input class="no_glow_on_focus" id="RatingThreshold" value="1" size="3">
-      </div>
-    </div>
+    </form>
   </div>
-  <div style="margin-top: 5px" id="NoteField"></div>
-  <div style="margin-top: 5px" id="globalErrorBox"></div>
+
+  <div style="margin-top: 5px" id="NoteBox"></div>
+  <div style="margin-top: 5px" id="GlobalErrorBox"></div>
 
   <hr />
-  <div style="width: 100%; height: 550px; overflow : auto;">
-    <ul id="thumbs_container">&nbsp;</ul>
+  <div class="ThumbsViewer-container">
+    <ul id="ThumbsViewer">&nbsp;</ul>
   </div>
   <hr />
 
