@@ -36,16 +36,6 @@
 </head>
 
 <body style="height: 800px;">
-  <div class="clear_fix adbox">
-    <a href="//vk.com/movephotos3" target="_top">
-      <img src="mphoto.jpg" height="30px" width="30px" class="adbox-logo">
-      <div class="adbox-text">Рекомендуем
-        <br />
-        <strong>Перенос Фото 3.0</strong>
-      </div>
-    </a>
-  </div>
-
   <div id="welcome_dialog" title="Добро Пожаловать!" style="display: none;">
     <div style="display: table">
       <div style="display: table-cell; padding-right: 10px">
@@ -78,23 +68,35 @@
 
   <div class="MainForm-body">
     <form name="Form1" class="MainForm" action="" onsubmit="return false;">
-      <div class="MainForm-body-div">
-        <div>
-          <label for="vkUserList">Пользователь:</label>
-          <select class="ui-corner-tl ui-corner-bl ui-widget ui-widget-content" size="1" id="vkUserList">
-            <option value="">&nbsp;</option>
-            <option value="self">Я</option>
-          </select>
-          &nbsp; <strong>или</strong> &nbsp;
-          <label for="vkIdEdit">ID:</label>
-          <input class="ui-widget ui-widget-content ui-corner-all" style="padding-right: 0.5em; text-align: right;" id="vkIdEdit" type="text" title="Введите идентификатор пользователя или группы. Например: tproger, club32411977, durov, id105876"/>
+      <div class="MainForm-body-div" style="display: table">
+        <div style="display: table-cell; text-align: left">
+          <div>
+            <label for="vkUserList">Пользователь:</label>
+            <select class="ui-corner-tl ui-corner-bl ui-widget ui-widget-content" size="1" id="vkUserList">
+              <option value="">&nbsp;</option>
+              <option value="self">Я</option>
+            </select>
+            &nbsp;
+            <strong>или</strong> &nbsp;
+            <label for="vkIdEdit">ID:</label>
+            <input class="ui-widget ui-widget-content ui-corner-all" style="padding-right: 0.5em; text-align: right;" id="vkIdEdit" type="text" title="Введите идентификатор пользователя или группы. Например: tproger, club32411977, durov, id105876" />
+          </div>
+          <div style="margin-top: 10px">
+            &nbsp;
+            <strong>или</strong> &nbsp;
+            <label for="vkGroupList">Группа:</label>
+            <select class="ui-corner-tl ui-corner-bl ui-widget ui-widget-content" name="vkGroupList" size="1" id="vkGroupList">
+              <option value="">&nbsp;</option>
+            </select>
+          </div>
         </div>
-        <div style="margin-top: 10px">
-          &nbsp; <strong>или</strong> &nbsp;
-          <label for="vkGroupList">Группа:</label>
-          <select class="ui-corner-tl ui-corner-bl ui-widget ui-widget-content" name="vkGroupList" size="1" id="vkGroupList">
-            <option value="">&nbsp;</option>
-          </select>
+        <div style="display: table-cell; text-align: left">
+          <div>
+            <label for="filterAlbum">Рейтинг по альбому:</label>
+          </div>
+          <div style="margin-top: 10px">
+            <input class="ui-widget ui-widget-content ui-corner-all" style="padding-right: 0.5em; text-align: right;" id="filterAlbum" type="text" size="30" title="Введите название альбома, для которого строить рейтинг" />
+          </div>
         </div>
       </div>
 
@@ -133,9 +135,21 @@
 
   <div class="footer">
     <div class="footer-table">
-      <div class="footer-table-cell" style="width: 180px" id="vk_like"></div>
       <div class="footer-table-cell" style="width: 150px">
         <a style="color: #2a5885; cursor: pointer" href="//vk.com/id105876" target="_top">&copy; Leonid Azarenkov</a>
+      </div>
+      <div class="footer-table-cell" style="width: 180px" id="vk_like"></div>
+      <div class="footer-table-cell" style="width: 150px">
+        <div class="adbox">
+          <a href="//vk.com/movephotos3" target="_top">
+            <div class="adbox-logo">
+              <img src="mphoto.jpg" height="25px" width="25px">
+            </div>
+            <div class="adbox-text">
+              <strong>Перенос Фото 3.5</strong>
+            </div>
+          </a>
+        </div>
       </div>
     </div>
   </div>

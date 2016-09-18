@@ -176,21 +176,24 @@ var RPApi = {
   },
 
   onUserChanged: function () {
-    this.vkIdEdit.value = this.vkUserList.item(this.vkUserList.selectedIndex).value;
-    this.vkGroupList.selectedIndex = 0;
-    $("#goButton").button("option", "label", this.goBtnLabelRating);
+    var self = RPApi;
+    self.vkIdEdit.value = self.vkUserList.item(self.vkUserList.selectedIndex).value;
+    self.vkGroupList.selectedIndex = 0;
+    $("#goButton").button("option", "label", self.goBtnLabelRating);
   },
 
   onGroupChanged: function () {
-    this.vkIdEdit.value = this.vkGroupList.item(this.vkGroupList.selectedIndex).value;
-    this.vkUserList.selectedIndex = 0;
-    $("#goButton").button("option", "label", this.goBtnLabelRating);
+    var self = RPApi;
+    self.vkIdEdit.value = self.vkGroupList.item(self.vkGroupList.selectedIndex).value;
+    self.vkUserList.selectedIndex = 0;
+    $("#goButton").button("option", "label", self.goBtnLabelRating);
   },
 
   onUidGidChanged: function () {
-    this.vkUserList.selectedIndex = 0;
-    this.vkGroupList.selectedIndex = 0;
-    $("#goButton").button("option", "label", this.goBtnLabelRating);
+    var self = RPApi;
+    self.vkUserList.selectedIndex = 0;
+    self.vkGroupList.selectedIndex = 0;
+    $("#goButton").button("option", "label", self.goBtnLabelRating);
   },
 
   onThreshSpinChange: function () {
@@ -382,17 +385,18 @@ var RPApi = {
 
   //update progress bar and rated photos number span
   updateProgress: function (p, q) {
-    this.photosLoadedCnt += p;
-    this.photosFilteredCnt += q;
+    var self = RPApi;
+    self.photosLoadedCnt += p;
+    self.photosFilteredCnt += q;
 
-    if (!this.photosLoadedCnt) {
-      console.log("RPApi.updateProgress:: this.photosLoadedCnt == 0!");
+    if (!self.photosLoadedCnt) {
+      console.log("RPApi.updateProgress:: self.photosLoadedCnt == 0!");
       return;
     }
 
-    var progress = this.photosLoadedCnt / this.photosCount * 100;
-    this.$progressBar.progressbar("value", progress);
-    this.$ratedPhotosSpan.text(this.photosFilteredCnt);
+    var progress = self.photosLoadedCnt / self.photosCount * 100;
+    self.$progressBar.progressbar("value", progress);
+    self.$ratedPhotosSpan.text(self.photosFilteredCnt);
   },
 
   //resolve user/group by screen_name
