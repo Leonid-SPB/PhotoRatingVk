@@ -311,7 +311,7 @@ var RPApi = {
         self.$totalPhotosSpan.text(count);
 
         //query photos from all albums and from service albums
-        var d1 = VkAppUtils.queryAllPhotos(ownerId, 0, Settings.MaxTotalPhotos, filterFn);
+        var d1 = self.queryAllRatedPhotos(ownerId, 0, Settings.MaxTotalPhotos, 1);
         var d2 = VkAppUtils.queryAlbumPhotos(ownerId, 'saved', 0, Settings.MaxTotalPhotos, filterFn);
         var d3 = VkAppUtils.queryAlbumPhotos(ownerId, 'wall', 0, Settings.MaxTotalPhotos, filterFn);
         var d4 = VkAppUtils.queryAlbumPhotos(ownerId, 'profile', 0, Settings.MaxTotalPhotos, filterFn);
@@ -508,6 +508,50 @@ var RPApi = {
     return filtred;
   },
 
+  //query photos from all public albums (except for service albums)
+  //applies filterFn to each retreived chunk of photos
+  //reports progress (photos retreived, photos left after filtering)
+  queryAllRatedPhotos: function (ownerId, offset, maxCount, minLikes) {
+    var self = this;
+    var ddd = $.Deferred();
+    var photos = [];
+
+    function getNextChunk__(offset, countLeft) {
+      var count = Math.min(countLeft, Settings.GetPhotosChunksSz);
+      VkApiWrapper.queryAllRatedPhotos(ownerId, offset, count, minLikes).done(
+        function (response) {
+          if (!response.items) {
+            response.items = [];
+          }
+
+          photos = photos.concat(response.items);
+          photos = self.sortPhotosByRating(photos);
+          photos = photos.slice(0, Settings.MaxRatedPhotos);
+          minLikes = (photos.length == Settings.MaxRatedPhotos) ? photos[photos.length - 1].likes.count : minLikes;
+
+          //report progress
+          var progress = Math.min(count, response.count - offset);
+          ddd.notify(progress, response.items.length);
+
+          offset = offset + progress;
+          if ((offset < response.count) && (countLeft > 0)) {
+            //request next chunk
+            getNextChunk__(offset, countLeft - response.items.length);
+          } else {
+            //finally resolve with the list of retreived photos
+            ddd.resolve(photos);
+          }
+        }
+      ).fail(function (error) {
+        ddd.reject(error);
+      });
+    }
+
+    getNextChunk__(offset, maxCount);
+
+    return ddd.promise();
+  },
+
   sortPhotosByRating: function (photos) {
     function likedPhotosSortFn(a, b) {
       return b.likes.count - a.likes.count;
@@ -518,7 +562,7 @@ var RPApi = {
 
   displayError: function (errMsg) {
     //use global displayError(msg, errorBoxId)
-    VkAppUtils.displayError(errMsg, "globalErrorBox", Settings.ErrorHideAfter);
+    VkAppUtils.displayError(errMsg, "GlobalErrorBox", Settings.ErrorHideAfter);
   },
 
 };
@@ -600,7 +644,7 @@ $(function () {
     },
     function () {
       // API initialization failed
-      VkAppUtils.displayError("Не удалось инициализировать VK JS API! Попробуйте перезагрузить приложение.", "globalErrorBox");
+      VkAppUtils.displayError("Не удалось инициализировать VK JS API! Попробуйте перезагрузить приложение.", "GlobalErrorBox");
       d.reject();
     },
     '5.53'

@@ -211,9 +211,10 @@ var VkAppUtils = {
           //report progress
           ddd.notify(response.items.length, photosFiltered.length);
 
+          offset = offset + response.items.length;
           if ((offset < response.count) && (countLeft > 0)) {
             //request next chunk
-            getNextChunk__(offset + response.items.length, countLeft - response.items.length);
+            getNextChunk__(offset, countLeft - response.items.length);
           } else {
             //finally resolve with the list of retreived photos
             ddd.resolve(photos);
@@ -265,9 +266,10 @@ var VkAppUtils = {
           //report progress
           ddd.notify(response.items.length, photosFiltered.length);
 
+          offset = offset + response.items.length;
           if ((offset < response.count) && (countLeft > 0)) {
             //request next chunk
-            getNextChunk__(offset + response.items.length, countLeft - response.items.length);
+            getNextChunk__(offset, countLeft - response.items.length);
           } else {
             //finally resolve with the list of retreived photos
             ddd.resolve(photos, response.count);
