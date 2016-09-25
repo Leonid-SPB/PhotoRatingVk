@@ -1,6 +1,8 @@
 /**
  *	Site-specific configuration settings for Highslide JS
  */
+/* globals $, hs*/
+
 hs.graphicsDir = 'graphics/';
 hs.showCredits = false;
 hs.outlineType = 'rounded-white';

@@ -288,3 +288,18 @@ hr {
   text-align: center;
   vertical-align: middle;
 }
+
+.tooltip-close {
+  width: 24px;
+  height: 24px;
+  background: url(graphics/closeX.png);
+  display: inline-block;
+  float: right;
+  cursor: pointer;
+  opacity: 0.5;
+  margin-top: .7em;
+}
+
+.tooltip-close:hover {
+  opacity: 1;
+}
