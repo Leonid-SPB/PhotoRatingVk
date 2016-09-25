@@ -174,14 +174,15 @@ var VkApiWrapper = {
     var d = $.Deferred();
 
     // jshint multistr:true
-    var code_ = "var tmp,rsp=[],i=0;\n\
+    var code_ = "var tmp,rsp=[],i=0,rtd=0;\n\
 tmp=API.photos.getAll({owner_id:%1,offset:%2,count:%3,extended:1,photo_sizes:1,no_service_albums:1});\n\
 if(tmp.error_code)return tmp;\n\
 while(i<tmp.items.length){\n\
 if(tmp.items[i].likes.count>=%4)rsp.push(tmp.items[i]);\n\
+if(tmp.items[i].likes.count>0)rtd=rtd+1;\n\
 i=i+1;\n\
 }\n\
-return {count: tmp.count, items: rsp};\n";
+return {count: tmp.count, items: rsp, rated: rtd};\n";
 
     var code = code_.replace(/%1/g, ownerId);
     code = code.replace(/%2/g, offset);
