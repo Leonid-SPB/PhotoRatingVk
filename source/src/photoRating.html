@@ -68,39 +68,32 @@
 
   <div class="MainForm-body">
     <form name="Form1" class="MainForm" action="" onsubmit="return false;">
-      <div class="MainForm-body-div" style="display: table">
-        <div style="display: table-cell; text-align: left">
-          <div>
-            <label for="vkUserList">Пользователь:</label>
-            <select class="ui-corner-tl ui-corner-bl ui-widget ui-widget-content" size="1" id="vkUserList">
-              <option value="">&nbsp;</option>
-              <option value="self">Я</option>
-            </select>
-            &nbsp;
-            <strong>или</strong> &nbsp;
-            <label for="vkIdEdit">ID:</label>
-            <input class="ui-widget ui-widget-content ui-corner-all" style="padding-right: 0.5em; text-align: right;" id="vkIdEdit" type="text" title="Введите идентификатор пользователя или группы. Например: tproger, club32411977, durov, id105876" />
-          </div>
-          <div style="margin-top: 10px">
-            &nbsp;
-            <strong>или</strong> &nbsp;
-            <label for="vkGroupList">Группа:</label>
-            <select class="ui-corner-tl ui-corner-bl ui-widget ui-widget-content" name="vkGroupList" size="1" id="vkGroupList">
-              <option value="">&nbsp;</option>
-            </select>
-          </div>
+      <div class="MainForm-body-div">
+        <div>
+          <label for="vkUserList">Пользователь:</label>
+          <select class="ui-corner-tl ui-corner-bl ui-widget ui-widget-content" size="1" id="vkUserList">
+            <option value="">&nbsp;</option>
+            <option value="self">Я</option>
+          </select>
+          &nbsp;
+          <strong>или</strong> &nbsp;
+          <label for="vkIdEdit">ID:</label>
+          <input class="ui-widget ui-widget-content ui-corner-all" style="padding-right: 0.5em; text-align: right;" id="vkIdEdit" type="text" title="Введите идентификатор пользователя или группы. Например: tproger, club32411977, durov, id105876" />
         </div>
-        <div style="display: table-cell; text-align: left">
-          <div>
-            <label for="filterAlbum">Рейтинг по альбому:</label>
-          </div>
-          <div style="margin-top: 10px">
-            <!--<input class="ui-widget ui-widget-content ui-corner-all" style="padding-right: 0.5em; text-align: right;" id="filterAlbum" type="text" size="30" title="Введите название альбома, для которого строить рейтинг" />-->
-            <select class="ui-corner-tl ui-corner-bl ui-widget ui-widget-content" size="1" id="Form1_AlbumList" title="Альбом, для которого строить рейтинг">
-                <option value="0">(все альбомы)</option>
-              </select>
-          </div>
+        <div style="margin-top: 10px">
+          &nbsp;
+          <strong>или</strong> &nbsp;
+          <label for="vkGroupList">Группа:</label>
+          <select class="ui-corner-tl ui-corner-bl ui-widget ui-widget-content" name="vkGroupList" size="1" id="vkGroupList">
+            <option value="">&nbsp;</option>
+          </select>
         </div>
+      </div>
+      <div class="MainForm-body-div">
+        <label for="filterAlbum">Рейтинг по альбому:</label>
+        <select class="ui-corner-tl ui-corner-bl ui-widget ui-widget-content" size="1" id="Form1_AlbumList" title="Альбом, для которого строить рейтинг">
+          <option value="0">(все альбомы)</option>
+        </select>
       </div>
 
       <div class="MainForm-body-div">

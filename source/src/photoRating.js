@@ -68,9 +68,9 @@ var RPApi = {
     self.$ratingThreshSpin = $("#RatingThreshold");
 
     //assign event handlers
-    $(self.vkUserList).change(self.onUserChanged);
+    $(self.vkUserList).change(self.onUserChangedEvent);
     $(self.vkIdEdit).change(self.onUidGidChanged);
-    $(self.vkGroupList).change(self.onGroupChanged);
+    $(self.vkGroupList).change(self.onGroupChangedEvent);
     $("#goButton").click(self.onGoButtonClick);
     $("#ThumbsViewer").on("click.RPApi", ".ThumbsViewer-thumb", function (event, parent) {
       var $this = $(this);
@@ -181,6 +181,28 @@ var RPApi = {
     });
   },
 
+  onUserChangedEvent: function () {
+    var self = RPApi;
+
+    self.disableControls(1);
+    Utils.showSpinner();
+    self.onUserChanged().always(function () {
+      Utils.hideSpinner();
+      self.disableControls(0);
+    });
+  },
+
+  onGroupChangedEvent: function () {
+    var self = RPApi;
+
+    self.disableControls(1);
+    Utils.showSpinner();
+    self.onGroupChanged().always(function () {
+      Utils.hideSpinner();
+      self.disableControls(0);
+    });
+  },
+
   onUserChanged: function () {
     var self = RPApi;
     self.vkIdEdit.value = self.vkUserList.item(self.vkUserList.selectedIndex).value;
@@ -204,7 +226,7 @@ var RPApi = {
     self.vkUserList.selectedIndex = 0;
     $("#goButton").button("option", "label", self.goBtnLabelRating);
 
-    if (self.vkGroupListt.selectedIndex) {
+    if (self.vkGroupList.selectedIndex) {
       self.ownerId = -self.groupMap[self.vkIdEdit.value].id;
       $("#goButton").button("enable");
     } else {
