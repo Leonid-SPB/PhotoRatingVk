@@ -412,7 +412,7 @@ var VkAppUtils = {
       }
     }).fail(onFail);
 
-    return ddd;
+    return ddd.promise();
   },
 
   validateApp: function (vkSid, appLocation, delay) {

@@ -42,6 +42,7 @@ var RPApi = {
   busyFlag: true,
   refreshTmoutId: null,
   ownerId: 0,
+  albumId: 0,
   friendMap: [],
   groupMap: [],
   ratedPhotos: [],
@@ -71,6 +72,7 @@ var RPApi = {
     $(self.vkUserList).change(self.onUserChangedEvent);
     $(self.vkIdEdit).change(self.onUidGidChanged);
     $(self.vkGroupList).change(self.onGroupChangedEvent);
+    $(self.albumListSel).change(self.onAlbumChanged);
     $("#goButton").click(self.onGoButtonClick);
     $("#ThumbsViewer").on("click.RPApi", ".ThumbsViewer-thumb", function (event, parent) {
       var $this = $(this);
@@ -201,6 +203,11 @@ var RPApi = {
       Utils.hideSpinner();
       self.disableControls(0);
     });
+  },
+
+  onAlbumChanged: function () {
+    var self = RPApi;
+    $("#goButton").button("option", "label", self.goBtnLabelRating);
   },
 
   onUserChanged: function () {
@@ -403,12 +410,17 @@ var RPApi = {
       Utils.hideSpinner();
     }
 
-    //if no album filter, do all photos rating
-    //else try to resolve album
-    self.collectAllPhotosRating().done(function () {
-      self.showRating().always(onAlways);
-    }).fail(onAlways);
-
+    var selIndex = self.albumListSel.selectedIndex;
+    self.albumId = self.albumListSel.item(selIndex).value;
+    if (selIndex > 0) { //rating by selected album
+      self.collectAlbumPhotosRating().done(function () {
+        self.showRating().always(onAlways);
+      }).fail(onAlways);
+    } else { //no album filter, do all photos rating
+      self.collectAllPhotosRating().done(function () {
+        self.showRating().always(onAlways);
+      }).fail(onAlways);
+    }
   },
 
   showRating: function () {
@@ -426,7 +438,7 @@ var RPApi = {
     if (!self.ratedPhotos.length) {
       self.displayError("Не удалось составить рейтинг! Не найдено фотографий, с рейтингом выше 1");
       ddd.reject();
-      return;
+      return ddd.promise();
     }
 
     //for collected photos request a map: album_id -> album_title
@@ -495,7 +507,7 @@ var RPApi = {
 
       //no photos, nothing to do
       if (!self.photosCount) {
-        ddd.reject();
+        ddd.resolve();
         return;
       }
 
@@ -515,6 +527,48 @@ var RPApi = {
         ddd.reject();
       }).done(function () {
         ddd.resolve();
+      });
+    }).fail(function () {
+      ddd.reject();
+    });
+
+    return ddd.promise();
+  },
+
+  collectAlbumPhotosRating: function () {
+    var self = RPApi;
+    var ddd = $.Deferred();
+
+    function onProgress(p, q) {
+      self.updateProgress(p, q);
+    }
+
+    function filterFn(photos) {
+      return self.filterPhotosByRating(photos, 1);
+    }
+
+    //request total number of photos for progress reporting purpose
+    VkApiWrapper.queryPhotos({
+      owner_id: self.ownerId,
+      album_id: self.albumId,
+      offset: 0,
+      count: 0
+    }).done(function (rsp) {
+      self.photosCount = rsp.count;
+      self.$totalPhotosSpan.text(self.photosCount);
+
+      //no photos, nothing to do
+      if (!self.photosCount) {
+        ddd.resolve();
+        return;
+      }
+
+      //query photos from all albums and from service albums
+      VkAppUtils.queryAlbumPhotos(self.ownerId, self.albumId, 0, Settings.MaxTotalPhotos, filterFn).progress(onProgress).done(function (photos) {
+        self.ratedPhotos = self.ratedPhotos.concat(photos);
+        ddd.resolve();
+      }).fail(function () {
+        ddd.reject();
       });
     }).fail(function () {
       ddd.reject();
@@ -583,7 +637,7 @@ var RPApi = {
       });
     }
 
-    return ddd;
+    return ddd.promise();
   },
 
   //post a link to the current rating to user wall
