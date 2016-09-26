@@ -149,6 +149,7 @@ var RPApi = {
     $.when(d0, d1, d2).done(function () {
       //url parameter when applicatiuon launched by a wall link
       var uidGid = Utils.sanitizeParameter(Utils.getParameterByName("uidGid", true));
+      var albumId = Utils.sanitizeParameter(Utils.getParameterByName("albumId", true));
 
       function defaultInit() {
         //by default: select user itself in user list select
@@ -173,6 +174,17 @@ var RPApi = {
         defaultInit();
       }).done(function () {
         //if uidGid was valid, start building photo rating automatically
+
+        //try to find filter album by albumId
+        if (albumId) {
+          for (var j = 0; j < self.albumListSel.length; ++j) {
+            if (self.albumListSel.item(j).value == albumId) {
+              self.albumListSel.selectedIndex = j;
+              break;
+            }
+          }
+        }
+
         self.onGoButtonClick(true);
       });
     }).fail(function () {
@@ -474,8 +486,8 @@ var RPApi = {
         //and enable "share" button
         if (photos.length > 10) {
           VkAppUtils.rateRequest(Settings.RateRequestDelay);
-          $("#goButton").button("option", "label", self.goBtnLabelSave);
         }
+        $("#goButton").button("option", "label", self.goBtnLabelSave);
       });
     }).fail(function () {
       ddd.reject();
@@ -671,8 +683,8 @@ var RPApi = {
       return;
     }
 
-    var attachments = /*"photo-45558877_428286179," + */ Settings.VkAppLocation + "?uidGid=" + self.vkIdEdit.value;
-    var guid = "app5597335-" + self.vkIdEdit.value;
+    var attachments = /*"photo-45558877_428286179," + */ Settings.VkAppLocation + "?uidGid=" + self.vkIdEdit.value + "&albumId=" + self.albumId;
+    var guid = "app5597335-" + self.vkIdEdit.value + self.albumId;
 
     //request to make a wall post
     VkApiWrapper.wallPost({

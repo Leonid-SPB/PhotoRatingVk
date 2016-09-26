@@ -1,10 +1,10 @@
 pending:
-) update components (take from MovePhoto)
 ) video "how to use"
 ) style tuning: better loadding gif, fonts, etc...
-) filter by album?
 
 done:
+x) filter by album?
+x) update components (take from MovePhoto)
 x) update wiki page and tutorial for new users
 x) improve welcome dialog (link to help page), add tooltips?
 x) test on all modern browsers: chrome, firefox, edge, ie
