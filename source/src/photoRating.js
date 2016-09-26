@@ -19,6 +19,7 @@ var Settings = {
   MaxFriendsList: 500,
   MaxLikeThresh: 1000,
   RatingRefreshDelay: 700,
+  WallAlbumId: -7,
 
   QueryUserFields: "first_name,last_name,screen_name,first_name_gen,last_name_gen",
 
@@ -32,6 +33,7 @@ var RPApi = {
   vkUserList: null,
   vkGroupList: null,
   vkIdEdit: null,
+  albumListSel: null,
   $totalPhotosSpan: null,
   $ratedPhotosSpan: null,
   $chosenPhotosSpan: null,
@@ -40,6 +42,7 @@ var RPApi = {
   busyFlag: true,
   refreshTmoutId: null,
   ownerId: 0,
+  albumId: 0,
   friendMap: [],
   groupMap: [],
   ratedPhotos: [],
@@ -51,17 +54,36 @@ var RPApi = {
   goBtnTooltipRating: "Составить рейтинг фотографий",
   goBtnLabelSave: "Сохранить на стену",
   goBtnTooltipSave: "Сохранить рейтинг на стену",
+  EmptyIdGid: 0,
 
   init: function () {
-    var self = this;
+    var self = RPApi;
     self.vkUserList = document.getElementById("vkUserList");
     self.vkGroupList = document.getElementById("vkGroupList");
     self.vkIdEdit = document.getElementById("vkIdEdit");
+    self.albumListSel = document.getElementById("Form1_AlbumList");
     self.$progressBar = $("#Progressbar");
     self.$totalPhotosSpan = $("#totalPhotosNum");
     self.$ratedPhotosSpan = $("#ratedPhotosNum");
     self.$chosenPhotosSpan = $("#chosenPhotosNum");
     self.$ratingThreshSpin = $("#RatingThreshold");
+
+    //assign event handlers
+    $(self.vkUserList).change(self.onUserChangedEvent);
+    $(self.vkIdEdit).change(self.onUidGidChanged);
+    $(self.vkGroupList).change(self.onGroupChangedEvent);
+    $(self.albumListSel).change(self.onAlbumChanged);
+    $("#goButton").click(self.onGoButtonClick);
+    $("#ThumbsViewer").on("click.RPApi", ".ThumbsViewer-thumb", function (event, parent) {
+      var $this = $(this);
+      var PluginName = 'ThumbsViewer';
+      var $data = $this.data(PluginName);
+
+      //open original VK image in a pop-up window
+      var url = "//vk.com/photo" + $data.vk_img.owner_id + "_" + $data.vk_img.id;
+      var myWindow = window.open(url, 'vk_photo', $("#ThumbsViewer").data(PluginName).VkPhotoPopupSettings, false);
+      myWindow.focus();
+    });
 
     self.$ratingThreshSpin.on("spin", function (event, ui) {
       RPApi.onThreshSpinChange.call(self);
@@ -127,16 +149,21 @@ var RPApi = {
     $.when(d0, d1, d2).done(function () {
       //url parameter when applicatiuon launched by a wall link
       var uidGid = Utils.sanitizeParameter(Utils.getParameterByName("uidGid", true));
+      var albumId = Utils.sanitizeParameter(Utils.getParameterByName("albumId", true));
 
-      //by default: select user itself in user list select
-      self.vkUserList.selectedIndex = 1;
-      self.onUserChanged();
+      function defaultInit() {
+        //by default: select user itself in user list select
+        self.vkUserList.selectedIndex = 1;
+        self.onUserChanged().always(function () {
+          self.busyFlag = false;
+          Utils.hideSpinner();
+          self.disableControls(0);
+        });
+      }
 
+      //normal mode, initialization finished here
       if (!uidGid) {
-        //normal mode, initialization finished
-        self.busyFlag = false;
-        Utils.hideSpinner();
-        self.disableControls(0);
+        defaultInit();
         return;
       }
 
@@ -144,12 +171,21 @@ var RPApi = {
       //try resolve provided ID
       self.resolveUidGid(uidGid).fail(function () {
         //failed to resolve ID
-        self.busyFlag = false;
-        Utils.hideSpinner();
-        self.disableControls(0);
+        defaultInit();
       }).done(function () {
         //if uidGid was valid, start building photo rating automatically
-        self.onGoButton(true);
+
+        //try to find filter album by albumId
+        if (albumId) {
+          for (var j = 0; j < self.albumListSel.length; ++j) {
+            if (self.albumListSel.item(j).value == albumId) {
+              self.albumListSel.selectedIndex = j;
+              break;
+            }
+          }
+        }
+
+        self.onGoButtonClick(true);
       });
     }).fail(function () {
       //initialization failed, disable controls
@@ -159,26 +195,146 @@ var RPApi = {
     });
   },
 
+  onUserChangedEvent: function () {
+    var self = RPApi;
+
+    self.disableControls(1);
+    Utils.showSpinner();
+    self.onUserChanged().always(function () {
+      Utils.hideSpinner();
+      self.disableControls(0);
+    });
+  },
+
+  onGroupChangedEvent: function () {
+    var self = RPApi;
+
+    self.disableControls(1);
+    Utils.showSpinner();
+    self.onGroupChanged().always(function () {
+      Utils.hideSpinner();
+      self.disableControls(0);
+    });
+  },
+
+  onAlbumChanged: function () {
+    var self = RPApi;
+    $("#goButton").button("option", "label", self.goBtnLabelRating);
+  },
+
   onUserChanged: function () {
-    this.vkIdEdit.value = this.vkUserList.item(this.vkUserList.selectedIndex).value;
-    this.vkGroupList.selectedIndex = 0;
-    $("#goButton").button("option", "label", this.goBtnLabelRating);
+    var self = RPApi;
+    self.vkIdEdit.value = self.vkUserList.item(self.vkUserList.selectedIndex).value;
+    self.vkGroupList.selectedIndex = 0;
+    $("#goButton").button("option", "label", self.goBtnLabelRating);
+
+    if (self.vkUserList.selectedIndex) {
+      self.ownerId = self.friendMap[self.vkIdEdit.value].id;
+      $("#goButton").button("enable");
+    } else {
+      self.ownerId = self.EmptyIdGid;
+      $("#goButton").button("disable");
+    }
+
+    return self.updateAlbumListBox();
   },
 
   onGroupChanged: function () {
-    this.vkIdEdit.value = this.vkGroupList.item(this.vkGroupList.selectedIndex).value;
-    this.vkUserList.selectedIndex = 0;
-    $("#goButton").button("option", "label", this.goBtnLabelRating);
+    var self = RPApi;
+    self.vkIdEdit.value = self.vkGroupList.item(self.vkGroupList.selectedIndex).value;
+    self.vkUserList.selectedIndex = 0;
+    $("#goButton").button("option", "label", self.goBtnLabelRating);
+
+    if (self.vkGroupList.selectedIndex) {
+      self.ownerId = -self.groupMap[self.vkIdEdit.value].id;
+      $("#goButton").button("enable");
+    } else {
+      self.ownerId = self.EmptyIdGid;
+      $("#goButton").button("disable");
+    }
+
+    return self.updateAlbumListBox();
   },
 
   onUidGidChanged: function () {
-    this.vkUserList.selectedIndex = 0;
-    this.vkGroupList.selectedIndex = 0;
-    $("#goButton").button("option", "label", this.goBtnLabelRating);
+    var self = RPApi;
+
+    self.vkUserList.selectedIndex = 0;
+    self.vkGroupList.selectedIndex = 0;
+    self.ownerId = self.EmptyIdGid;
+    self.updateAlbumListBox(); //effectively clean albums listbox
+
+    $("#goButton").button("option", "label", self.goBtnLabelRating);
+
+    if (!self.vkIdEdit.value.trim().length) {
+      $("#goButton").button("disable");
+      return;
+    }
+
+    self.disableControls(1);
+    Utils.showSpinner();
+
+    //resolve user/group
+    self.resolveUidGid(self.vkIdEdit.value).always(function () {
+      //already called onUserChanged/onGroupChanged at this point
+      self.busyFlag = false;
+      Utils.hideSpinner();
+      self.disableControls(0);
+    }).fail(function () {
+      $("#goButton").button("disable");
+    });
+  },
+
+  updateAlbumListBox: function (noSpinner) {
+    var self = RPApi;
+    var ddd = $.Deferred();
+    var albums = [];
+
+    function updateAlbumsListBox() {
+      self.albumListSel.selectedIndex = 0;
+
+      //remove old options, skip "not selected" option
+      for (var i = self.albumListSel.length - 1; i >= 1; --i) {
+        self.albumListSel.remove(i);
+      }
+
+      for (i = 0; i < albums.length; i++) {
+        //put service albums to the beginning
+        var index = null;
+        if ((albums[i].owner_id > 0) && (albums[i].id == Settings.ProfileAlbumId)) {
+          continue;
+        } else if (albums[i].id < 0) {
+          index = 1;
+        }
+        var opt = new Option(albums[i].title, albums[i].id, false, false);
+        $(opt).data("RPApi", albums[i]);
+        self.albumListSel.add(opt, index);
+      }
+    }
+
+    if (self.ownerId != self.EmptyIdGid) {
+      VkAppUtils.queryAlbumList({
+        owner_id: self.ownerId,
+        need_system: 1,
+        album_ids: (self.ownerId < 0) ? Settings.WallAlbumId : ""
+      }).done(function (resp) {
+        albums = resp;
+        updateAlbumsListBox();
+        ddd.resolve();
+      }).fail(function () {
+        updateAlbumsListBox();
+        ddd.reject();
+      });
+    } else {
+      updateAlbumsListBox();
+      ddd.resolve();
+    }
+
+    return ddd.promise();
   },
 
   onThreshSpinChange: function () {
-    var self = this;
+    var self = RPApi;
     Settings.likedThresh = +self.$ratingThreshSpin.spinner("value");
 
     function refreshRating() {
@@ -188,7 +344,7 @@ var RPApi = {
       }
 
       //remove all photos from container
-      $("#thumbs_container").ThumbsViewer("empty");
+      $("#ThumbsViewer").ThumbsViewer("empty");
 
       //make new list of photos based on current likes threshold
       var photos = self.filterPhotosByRating(self.ratedPhotos, Settings.likedThresh);
@@ -201,8 +357,8 @@ var RPApi = {
       self.$chosenPhotosSpan.text(photos.length);
 
       //add photos to the container
-      $("#thumbs_container").ThumbsViewer("updateAlbumMap", self.albumMap);
-      $("#thumbs_container").ThumbsViewer("addThumbList", photos);
+      $("#ThumbsViewer").ThumbsViewer("updateAlbumMap", self.albumMap);
+      $("#ThumbsViewer").ThumbsViewer("addThumbList", photos);
     }
 
     //cancell previously schedulled refreshRating()
@@ -215,7 +371,7 @@ var RPApi = {
   },
 
   disableControls: function (disable) {
-    var self = this;
+    var self = RPApi;
     var dval = 0;
     var dstr = "enable";
     if (disable) {
@@ -227,11 +383,12 @@ var RPApi = {
     self.vkIdEdit.disabled = dval;
     self.vkUserList.disabled = dval;
     self.vkGroupList.disabled = dval;
+    self.albumListSel.disabled = dval;
     self.$ratingThreshSpin.spinner(dstr);
   },
 
-  onGoButton: function (noSpinner) {
-    var self = this;
+  onGoButtonClick: function (noSpinner) {
+    var self = RPApi;
 
     //save search result on user's wall
     if ($("#goButton").button("option", "label") == self.goBtnLabelSave) {
@@ -239,8 +396,12 @@ var RPApi = {
       return;
     }
 
+    //make rating
+
+    //cleanup
     self.disableControls(1);
-    $("#thumbs_container").ThumbsViewer("empty");
+
+    $("#ThumbsViewer").ThumbsViewer("empty");
     self.$progressBar.progressbar("value", 0);
     self.$totalPhotosSpan.text("0");
     self.$chosenPhotosSpan.text("0");
@@ -255,133 +416,193 @@ var RPApi = {
     if (!noSpinner)
       Utils.showSpinner();
 
-    //default error handler
-    //don't block the application so user can try again
-    function onFail() {
+    function onAlways() {
       self.disableControls(0);
       self.busyFlag = false;
       Utils.hideSpinner();
     }
 
-    //no screen name, make rating fou the user itself then
-    if (!self.vkIdEdit.value) {
-      self.vkUserList.selectedIndex = 1;
-      self.onUserChanged();
+    var selIndex = self.albumListSel.selectedIndex;
+    self.albumId = self.albumListSel.item(selIndex).value;
+    if (selIndex > 0) { //rating by selected album
+      self.collectAlbumPhotosRating().done(function () {
+        self.showRating().always(onAlways);
+      }).fail(onAlways);
+    } else { //no album filter, do all photos rating
+      self.collectAllPhotosRating().done(function () {
+        self.showRating().always(onAlways);
+      }).fail(onAlways);
+    }
+  },
+
+  showRating: function () {
+    var self = RPApi;
+    var ddd = $.Deferred();
+
+    //sort by rating and trim
+    self.ratedPhotos = self.sortPhotosByRating(self.ratedPhotos);
+    self.$ratedPhotosSpan.text(self.ratedPhotos.length);
+    if (self.ratedPhotos.length > Settings.MaxRatedPhotos) {
+      self.ratedPhotos = self.ratedPhotos.slice(0, Settings.MaxRatedPhotos);
     }
 
-    //take screen_name from edit box and resolve user data
-    self.resolveUidGid(self.vkIdEdit.value).done(function (userGroup, isUser) {
-      var ownerId = +userGroup.id;
-      ownerId = isUser ? ownerId : -ownerId; //make negative ID for groups/pages
+    //no rated photos found
+    if (!self.ratedPhotos.length) {
+      self.displayError("Не удалось составить рейтинг! Не найдено фотографий, с рейтингом выше 1");
+      ddd.reject();
+      return ddd.promise();
+    }
 
-      function onProgress(p, q) {
-        self.updateProgress(p, q);
+    //for collected photos request a map: album_id -> album_title
+    VkAppUtils.queryAlbumsInfo(self.ownerId, self.ratedPhotos).done(function (albumMap) {
+      //all data has been requested at this point
+      self.$progressBar.progressbar("value", 100);
+
+      //push album map to ThumbsViewer, map will be used for image captions
+      self.albumMap = albumMap;
+      $("#ThumbsViewer").ThumbsViewer("updateAlbumMap", self.albumMap);
+
+      //filter photos by rating threshold
+      var photos = self.filterPhotosByRating(self.ratedPhotos, Settings.likedThresh);
+
+      if (!photos.length) {
+        //if threshold was too high, lower it to see at least one photo
+        Settings.likedThresh = self.ratedPhotos[0].likes.count;
+        photos = self.filterPhotosByRating(self.ratedPhotos, Settings.likedThresh);
+        self.$ratingThreshSpin.spinner("value", Settings.likedThresh);
+      } else {
+        //update liked thresh to actual value
+        Settings.likedThresh = self.ratedPhotos[self.ratedPhotos.length - 1].likes.count;
+        self.$ratingThreshSpin.spinner("value", Settings.likedThresh);
       }
 
-      function pushPhotos(photos) {
+      //push photos to ThumbsViewer
+      self.$chosenPhotosSpan.text(photos.length);
+      $("#ThumbsViewer").ThumbsViewer("addThumbList", photos).done(function () {
+        //job is done!
+        ddd.resolve();
+
+        //if rating was not empty, ask user to rate application
+        //and enable "share" button
+        if (photos.length > 10) {
+          VkAppUtils.rateRequest(Settings.RateRequestDelay);
+        }
+        $("#goButton").button("option", "label", self.goBtnLabelSave);
+      });
+    }).fail(function () {
+      ddd.reject();
+    });
+
+    return ddd.promise();
+  },
+
+  collectAllPhotosRating: function () {
+    var self = RPApi;
+    var ddd = $.Deferred();
+
+    function onProgress(p, q) {
+      self.updateProgress(p, q);
+    }
+
+    function pushPhotos(photos) {
+      self.ratedPhotos = self.ratedPhotos.concat(photos);
+    }
+
+    function filterFn(photos) {
+      return self.filterPhotosByRating(photos, 1);
+    }
+
+    //request total number of photos for progress reporting purpose
+    VkAppUtils.getTotalPhotosCount(self.ownerId).done(function (count) {
+      self.photosCount = count;
+      self.$totalPhotosSpan.text(count);
+
+      //no photos, nothing to do
+      if (!self.photosCount) {
+        ddd.resolve();
+        return;
+      }
+
+      //query photos from all albums and from service albums
+      var d1 = self.queryAllRatedPhotos(self.ownerId, 0, Settings.MaxTotalPhotos, 1);
+      var d2 = VkAppUtils.queryAlbumPhotos(self.ownerId, 'saved', 0, Settings.MaxTotalPhotos, filterFn);
+      var d3 = VkAppUtils.queryAlbumPhotos(self.ownerId, 'wall', 0, Settings.MaxTotalPhotos, filterFn);
+      var d4 = VkAppUtils.queryAlbumPhotos(self.ownerId, 'profile', 0, Settings.MaxTotalPhotos, filterFn);
+
+      d1.progress(onProgress).done(pushPhotos);
+      d2.progress(onProgress).done(pushPhotos);
+      d3.progress(onProgress).done(pushPhotos);
+      d4.progress(onProgress).done(pushPhotos);
+
+      //when all photos have been retreived
+      $.when(d1, d2, d3, d4).fail(function () {
+        ddd.reject();
+      }).done(function () {
+        ddd.resolve();
+      });
+    }).fail(function () {
+      ddd.reject();
+    });
+
+    return ddd.promise();
+  },
+
+  collectAlbumPhotosRating: function () {
+    var self = RPApi;
+    var ddd = $.Deferred();
+
+    function onProgress(p, q) {
+      self.updateProgress(p, q);
+    }
+
+    function filterFn(photos) {
+      return self.filterPhotosByRating(photos, 1);
+    }
+
+    //request total number of photos for progress reporting purpose
+    VkApiWrapper.queryPhotos({
+      owner_id: self.ownerId,
+      album_id: self.albumId,
+      offset: 0,
+      count: 0
+    }).done(function (rsp) {
+      self.photosCount = rsp.count;
+      self.$totalPhotosSpan.text(self.photosCount);
+
+      //no photos, nothing to do
+      if (!self.photosCount) {
+        ddd.resolve();
+        return;
+      }
+
+      //query photos from all albums and from service albums
+      VkAppUtils.queryAlbumPhotos(self.ownerId, self.albumId, 0, Settings.MaxTotalPhotos, filterFn).progress(onProgress).done(function (photos) {
         self.ratedPhotos = self.ratedPhotos.concat(photos);
-      }
+        ddd.resolve();
+      }).fail(function () {
+        ddd.reject();
+      });
+    }).fail(function () {
+      ddd.reject();
+    });
 
-      function filterFn(photos) {
-        return self.filterPhotosByRating(photos, 1);
-      }
-
-      //request total number of photos for progress reporting purpose
-      VkAppUtils.getTotalPhotosCount(ownerId).done(function (count) {
-        self.photosCount = count;
-        self.$totalPhotosSpan.text(count);
-
-        //query photos from all albums and from service albums
-        var d1 = VkAppUtils.queryAllPhotos(ownerId, 0, Settings.MaxTotalPhotos, filterFn);
-        var d2 = VkAppUtils.queryAlbumPhotos(ownerId, 'saved', 0, Settings.MaxTotalPhotos, filterFn);
-        var d3 = VkAppUtils.queryAlbumPhotos(ownerId, 'wall', 0, Settings.MaxTotalPhotos, filterFn);
-        var d4 = VkAppUtils.queryAlbumPhotos(ownerId, 'profile', 0, Settings.MaxTotalPhotos, filterFn);
-
-        d1.progress(onProgress).fail(onFail).done(pushPhotos);
-        d2.progress(onProgress).fail(onFail).done(pushPhotos);
-        d3.progress(onProgress).fail(onFail).done(pushPhotos);
-        d4.progress(onProgress).fail(onFail).done(pushPhotos);
-
-        //when all photos have been retreived
-        $.when(d1, d2, d3, d4).done(function () {
-          //sort by rating and trim
-          self.ratedPhotos = self.sortPhotosByRating(self.ratedPhotos);
-          self.$ratedPhotosSpan.text(self.ratedPhotos.length);
-          if (self.ratedPhotos.length > Settings.MaxRatedPhotos) {
-            self.ratedPhotos = self.ratedPhotos.slice(0, Settings.MaxRatedPhotos);
-          }
-
-          //no rated photos found
-          if (!self.ratedPhotos.length) {
-            self.busyFlag = false;
-            Utils.hideSpinner();
-            self.displayError("Не удалось составить рейтинг! Не найдено фотографий, с рейтингом выше 1");
-            self.disableControls(0);
-            return;
-          }
-
-          //for collected photos request a map: album_id -> album_title
-          VkAppUtils.queryAlbumsInfo(ownerId, self.ratedPhotos).done(function (albumMap) {
-            //all data has been requested at this point
-            self.$progressBar.progressbar("value", 100);
-
-            //push album map to ThumbsViewer, map will be used for image captions
-            self.albumMap = albumMap;
-            $("#thumbs_container").ThumbsViewer("updateAlbumMap", self.albumMap);
-
-            //filter photos by rating threshold
-            var photos = self.filterPhotosByRating(self.ratedPhotos, Settings.likedThresh);
-
-            if (!photos.length) {
-              //if threshold was too high, lower it to see at least one photo
-              Settings.likedThresh = self.ratedPhotos[0].likes.count;
-              photos = self.filterPhotosByRating(self.ratedPhotos, Settings.likedThresh);
-              self.$ratingThreshSpin.spinner("value", Settings.likedThresh);
-            } else {
-              //update liked thresh to actual value
-              Settings.likedThresh = self.ratedPhotos[self.ratedPhotos.length - 1].likes.count;
-              self.$ratingThreshSpin.spinner("value", Settings.likedThresh);
-            }
-
-            //push photos to ThumbsViewer
-            self.$chosenPhotosSpan.text(photos.length);
-            $("#thumbs_container").ThumbsViewer("addThumbList", photos).done(function () {
-              //job is done!
-              self.busyFlag = false;
-              Utils.hideSpinner();
-              self.disableControls(0);
-
-              //if rating was not empty, ask user to rate application
-              //and enable "share" button
-              if (photos.length > 10) {
-                VkAppUtils.rateRequest(Settings.RateRequestDelay);
-                $("#goButton").button("option", "label", self.goBtnLabelSave);
-              }
-            }).fail(onFail);
-          }).fail(onFail);
-        }).fail(onFail);
-      }).fail(onFail);
-    }).fail(onFail);
+    return ddd.promise();
   },
 
   //update progress bar and rated photos number span
   updateProgress: function (p, q) {
-    this.photosLoadedCnt += p;
-    this.photosFilteredCnt += q;
+    var self = RPApi;
+    self.photosLoadedCnt += p;
+    self.photosFilteredCnt += q;
 
-    if (!this.photosLoadedCnt) {
-      console.log("RPApi.updateProgress:: this.photosLoadedCnt == 0!");
-      return;
-    }
-
-    var progress = this.photosLoadedCnt / this.photosCount * 100;
-    this.$progressBar.progressbar("value", progress);
-    this.$ratedPhotosSpan.text(this.photosFilteredCnt);
+    var progress = self.photosLoadedCnt / self.photosCount * 100;
+    self.$progressBar.progressbar("value", progress);
+    self.$ratedPhotosSpan.text(self.photosFilteredCnt);
   },
 
   //resolve user/group by screen_name
   resolveUidGid: function (str) {
-    var self = this;
+    var self = RPApi;
     var ddd = $.Deferred();
 
     str = str.trim();
@@ -389,14 +610,14 @@ var RPApi = {
     //tries to use cached data(friendMap/groupMap) before requesting server
     if (str in self.friendMap) {
       self.vkUserList.selectedIndex = self.friendMap[str].opt.index;
-      self.onUserChanged();
-
-      ddd.resolve(self.friendMap[str], true);
+      $.when(self.onUserChanged()).always(function () {
+        ddd.resolve(self.friendMap[str], true);
+      });
     } else if (str in self.groupMap) {
       self.vkGroupList.selectedIndex = self.groupMap[str].opt.index;
-      self.onGroupChanged();
-
-      ddd.resolve(self.groupMap[str], false);
+      $.when(self.onGroupChanged()).always(function () {
+        ddd.resolve(self.groupMap[str], false);
+      });
     } else {
       //provided screen_name was not found in local cache, requesting data from VK
       VkAppUtils.resolveUidGid(str).done(function (userGrp, isUser) {
@@ -408,7 +629,9 @@ var RPApi = {
 
           //make new item selected
           self.vkUserList.selectedIndex = 1;
-          self.onUserChanged();
+          $.when(self.onUserChanged()).always(function () {
+            ddd.resolve(userGrp, isUser);
+          });
         } else {
           //add new item to list select and cache
           userGrp.opt = new Option(userGrp.title, userGrp.screen_name, false, false);
@@ -417,22 +640,22 @@ var RPApi = {
 
           //make new item selected
           self.vkGroupList.selectedIndex = 1;
-          self.onGroupChanged();
+          $.when(self.onGroupChanged()).always(function () {
+            ddd.resolve(userGrp, isUser);
+          });
         }
-
-        ddd.resolve(userGrp, isUser);
       }).fail(function () {
         ddd.reject();
       });
     }
 
-    return ddd;
+    return ddd.promise();
   },
 
   //post a link to the current rating to user wall
   //so friends can see the same rating when they open the application
   wallPostResults: function () {
-    var self = this;
+    var self = RPApi;
     var message;
     var subj;
 
@@ -460,8 +683,8 @@ var RPApi = {
       return;
     }
 
-    var attachments = /*"photo-45558877_428286179," + */ Settings.VkAppLocation + "?uidGid=" + self.vkIdEdit.value;
-    var guid = "app5597335-" + self.vkIdEdit.value;
+    var attachments = /*"photo-45558877_428286179," + */ Settings.VkAppLocation + "?uidGid=" + self.vkIdEdit.value + "&albumId=" + self.albumId;
+    var guid = "app5597335-" + self.vkIdEdit.value + self.albumId;
 
     //request to make a wall post
     VkApiWrapper.wallPost({
@@ -488,6 +711,50 @@ var RPApi = {
     return filtred;
   },
 
+  //query photos from all public albums (except for service albums)
+  //applies filterFn to each retreived chunk of photos
+  //reports progress (photos retreived, photos left after filtering)
+  queryAllRatedPhotos: function (ownerId, offset, maxCount, minLikes) {
+    var self = this;
+    var ddd = $.Deferred();
+    var photos = [];
+
+    function getNextChunk__(offset, countLeft) {
+      var count = Math.min(countLeft, Settings.GetPhotosChunksSz);
+      VkApiWrapper.queryAllRatedPhotos(ownerId, offset, count, minLikes).done(
+        function (response) {
+          if (!response.items) {
+            response.items = [];
+          }
+
+          photos = photos.concat(response.items);
+          photos = self.sortPhotosByRating(photos);
+          photos = photos.slice(0, Settings.MaxRatedPhotos);
+          minLikes = (photos.length == Settings.MaxRatedPhotos) ? photos[photos.length - 1].likes.count : minLikes;
+
+          //report progress
+          var progress = Math.min(count, response.count - offset);
+          ddd.notify(progress, response.rated);
+
+          offset = offset + progress;
+          if ((offset < response.count) && (countLeft > 0)) {
+            //request next chunk
+            getNextChunk__(offset, countLeft - response.items.length);
+          } else {
+            //finally resolve with the list of retreived photos
+            ddd.resolve(photos);
+          }
+        }
+      ).fail(function (error) {
+        ddd.reject(error);
+      });
+    }
+
+    getNextChunk__(offset, maxCount);
+
+    return ddd.promise();
+  },
+
   sortPhotosByRating: function (photos) {
     function likedPhotosSortFn(a, b) {
       return b.likes.count - a.likes.count;
@@ -498,7 +765,7 @@ var RPApi = {
 
   displayError: function (errMsg) {
     //use global displayError(msg, errorBoxId)
-    VkAppUtils.displayError(errMsg, "globalErrorBox", Settings.ErrorHideAfter);
+    VkAppUtils.displayError(errMsg, "GlobalErrorBox", Settings.ErrorHideAfter);
   },
 
 };
@@ -510,7 +777,7 @@ $(function () {
 
   VkAppUtils.validateApp(Settings.vkSid, Settings.VkAppLocation, Settings.RedirectDelay);
 
-  $("#thumbs_container").ThumbsViewer({
+  $("#ThumbsViewer").ThumbsViewer({
     disableSel: true
   });
   $("#Progressbar").progressbar({
@@ -580,7 +847,7 @@ $(function () {
     },
     function () {
       // API initialization failed
-      VkAppUtils.displayError("Не удалось инициализировать VK JS API! Попробуйте перезагрузить приложение.", "globalErrorBox");
+      VkAppUtils.displayError("Не удалось инициализировать VK JS API! Попробуйте перезагрузить приложение.", "GlobalErrorBox");
       d.reject();
     },
     '5.53'

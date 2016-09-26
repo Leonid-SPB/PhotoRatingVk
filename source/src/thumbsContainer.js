@@ -2,9 +2,7 @@
     Licensed under the MIT license
 */
 
-/* Thumbs Container
-requires: jQuery, highslide
- */
+/* Thumbs Container */
 /* globals $, hs*/
 
 (function ($, hs) {
@@ -18,7 +16,7 @@ requires: jQuery, highslide
   };
 
   var PluginName = 'ThumbsViewer';
-  var ThumbClass = '.ThumbsViewer-thumb_block';
+  var ThumbClass = '.ThumbsViewer-thumb';
 
   var thC = {
 
@@ -37,27 +35,29 @@ requires: jQuery, highslide
         //private
         busy_dfrd__: $.Deferred(),
         abortTask__: false,
-        thumbsSelCnt__: 0
+        thumbsSelCnt__: 0,
+        thumbsCnt__: 0
       };
       data.busy_dfrd__.resolve();
       $.extend(data, defaults, opts);
 
       $this.data(PluginName, data);
-      $this.addClass("ThumbsViewer-thumbs_container");
+      $this.addClass("ThumbsViewer-list");
       $this.on("click.ThumbsViewer", ThumbClass, function (event) {
         thC.onThumbClick.call(this, event, $this);
       });
-      $this.on("click.ThumbsViewer", ".ThumbsViewer_zoom-ico", function (event) {
+      $this.on("click.ThumbsViewer", ".ThumbsViewer-zoomIco", function (event) {
         thC.onZoomClick.call(this, event, $this);
       });
     },
 
     ///removes $thumb div from container
     removeThumb: function ($thumb) {
+      var $data = $(this).data(PluginName);
       if ($thumb.hasClass("selected")) {
-        var $data = $(this).data(PluginName);
         --$data.thumbsSelCnt__;
       }
+      --$data.thumbsCnt__;
       $thumb.remove();
     },
 
@@ -77,6 +77,7 @@ requires: jQuery, highslide
             return;
           }
           thC.createThumb_.call(self, queue.shift());
+          ++$data.thumbsCnt__;
         }
         setTimeout(function () {
           addThumb__(queue);
@@ -109,6 +110,13 @@ requires: jQuery, highslide
       $.extend($data.albumMap, albumMap);
     },
 
+    ///disable/enable selection
+    selectionDisable: function (disable) {
+      var $this = $(this);
+      var $data = $this.data(PluginName);
+      $data.disableSel = disable;
+    },
+
     ///select all thumbnails in container
     selectAll: function () {
       var $this = $(this);
@@ -139,11 +147,22 @@ requires: jQuery, highslide
       $this.find(ThumbClass).removeClass("selected");
     },
 
-    ///disable/enable selection
-    selectionDisable: function (disable) {
+    ///toggle selection of $thumb
+    selectToggle: function ($thumb) {
       var $this = $(this);
       var $data = $this.data(PluginName);
-      $data.disableSel = disable;
+
+      if ($data.disableSel) {
+        return;
+      }
+
+      $thumb.toggleClass("selected");
+
+      if ($thumb.hasClass("selected")) {
+        ++$data.thumbsSelCnt__;
+      } else {
+        --$data.thumbsSelCnt__;
+      }
     },
 
     ///select all if any one is selected, deselect all if all are selected
@@ -158,12 +177,14 @@ requires: jQuery, highslide
       var thumbsSelCnt__ = 0;
       var thumbsTotal = 0;
 
-      $this.find(ThumbClass).each(function () {
+      /*$this.find(ThumbClass).each(function () {
         ++thumbsTotal;
         if ($(this).hasClass("selected")) {
           ++thumbsSelCnt__;
         }
-      });
+      });*/
+      thumbsSelCnt__ = $data.thumbsSelCnt__;
+      thumbsTotal = $data.thumbsCnt__;
 
       if (thumbsSelCnt__ == thumbsTotal) {
         $this.find(ThumbClass).removeClass("selected");
@@ -191,12 +212,12 @@ requires: jQuery, highslide
       //calculate which thumbs are currently visible based on 
       //scroll position and container/image geometry
       var $parentDiv = $this.parent().first();
-      var divHeight = $parentDiv.innerHeight();
-      var divWidth = $parentDiv.innerWidth();
-      var liHeight = $thumbs.first().outerHeight();
-      var liWidth = $thumbs.first().outerWidth();
+      var divHeight = $parentDiv.height();
+      var divWidth = $parentDiv.width();
+      var liHeight = $thumbs.first().outerHeight(true);
+      var liWidth = $thumbs.first().outerWidth(true);
       var rowsScrolled = Math.round($parentDiv.scrollTop() / liHeight);
-      var rowsOnScreen = Math.ceil(divHeight / liHeight);
+      var rowsOnScreen = Math.round(divHeight / liHeight);
       var thumbsInRow = Math.floor(divWidth / liWidth);
 
       var selFirstIndex = rowsScrolled * thumbsInRow;
@@ -228,19 +249,25 @@ requires: jQuery, highslide
 
       this.find(selector).each(function () {
         var $this = $(this);
-        var $data = $this.data(PluginName);
-        $data.$thumb = $this;
-        thumbData.push($data);
+        var item = {
+          data: $this.data(PluginName),
+          $thumb: $this
+        };
+        thumbData.push(item);
       });
 
       return thumbData;
     },
 
-    ///returns number of thumbnails selected
-    getThumbsCount: function (onlySelected) {
+    ///returns number of thumbnails total/selected
+    getThumbsCount: function () {
       var $data = $(this).data(PluginName);
-      var len = onlySelected ? $data.thumbsSelCnt__ : this.find(ThumbClass).length;
-      return len;
+      var total_ = $data.thumbsCnt__;
+      var selected_ = $data.thumbsSelCnt__;
+      return {
+        total: total_,
+        selected: selected_
+      };
     },
 
     ///remove all thumbnails from the container
@@ -257,6 +284,7 @@ requires: jQuery, highslide
       $.when($data.busy_dfrd__).done(function () {
         $this.empty();
         $data.thumbsSelCnt__ = 0;
+        $data.thumbsCnt__ = 0;
         $data.albumMap = {};
         d.resolve();
       });
@@ -312,7 +340,7 @@ requires: jQuery, highslide
 
         ++loadInProgressCnt;
         var vk_img = thumb.data(PluginName).vk_img;
-        var imgSrc = thC.getSelSizeUrl(vk_img, 'p', 'm');
+        var imgSrc = thC.getSelSizeUrl(vk_img, ['p', 'o', 'm', 's']);
         var thumb_img = $("<img />");
         thumb_img.on('load', function () {
           --loadInProgressCnt;
@@ -339,11 +367,11 @@ requires: jQuery, highslide
     createThumb_: function (vk_img) {
       var $this = $(this);
       var $data = $(this).data(PluginName);
-      var thumb_parent = $("<div class='ThumbsViewer-thumb_block loading' />");
+      var thumb_parent = $("<div class='ThumbsViewer-thumb loading' />");
 
       var titleStr = thC.makeTitle_.call(this, vk_img);
       var captionStr = thC.makeCaption_.call(this, vk_img);
-      var zoomImgSrc = thC.getSelSizeUrl(vk_img, 'y', 'x');
+      var zoomImgSrc = thC.getSelSizeUrl(vk_img, ['y', 'x']);
       var aa = $("<a />", {
         class: 'ThumbsViewer-hslink',
         href: zoomImgSrc,
@@ -353,7 +381,7 @@ requires: jQuery, highslide
         title: titleStr,
         caption: captionStr
       });
-      var zoomIcon = $('<div class="ThumbsViewer_zoom-ico" />').append(aa);
+      var zoomIcon = $('<div class="ThumbsViewer-zoomIco" />').append(aa);
 
       thumb_parent.append(zoomIcon);
       thumb_parent.attr("title", "Открыть оригинал фото");
@@ -382,11 +410,13 @@ requires: jQuery, highslide
       //caption contains album name, link to original VK photo and description
       var origUrl = "//vk.com/photo" + vk_img.owner_id + "_" + vk_img.id;
       var onClickOrigUrl = "var myWindow = window.open('" + origUrl + "', 'vk_photo', '" + $data.VkPhotoPopupSettings + "', false); myWindow.focus();";
+
+      // jshint multistr:true
       var caption = '\
-        <div>\
-          <div class="highslide-caption-divinfo" style="text-align: left"><b>Альбом</b>:<i> %1</i></div><div class="highslide-caption-divinfo" style="text-align: right"><a onclick="%2">Оригинал фото</a></div>\
-        </div>\
-        <div class="highslide-caption-descr">%3</div>';
+<div>\
+  <div class="highslide-caption-divinfo" style="text-align: left"><b>Альбом</b>:<i> %1</i></div><div class="highslide-caption-divinfo" style="text-align: right"><a onclick="%2">Оригинал фото</a></div>\
+</div>\
+<div class="highslide-caption-descr">%3</div>';
 
       caption = caption.replace("%1", album);
       caption = caption.replace("%2", onClickOrigUrl);
@@ -395,17 +425,28 @@ requires: jQuery, highslide
       return caption;
     },
 
-    ///retreive from VK Api image object a link to image with desired size szLiterPref
-    /// or fall back to alternative (old size format) szLiterAlt
-    getSelSizeUrl: function (vk_img, szLiterPref, szLiterAlt) {
-      var src_alt = vk_img.sizes[0].src;
-      for (var i = 0; i < vk_img.sizes.length; ++i) {
-        if (vk_img.sizes[i].type == szLiterPref) {
-          return vk_img.sizes[i].src;
-        } else if (vk_img.sizes[i].type == szLiterAlt) {
-          src_alt = vk_img.sizes[i].src;
+    ///retreive from VK Api image object a link to image with desired size szLiterPrefs
+    getSelSizeUrl: function (vk_img, szLiterPrefs) {
+      var src_alt = "logo150.png";
+
+      if (("sizes" in vk_img) && vk_img.sizes.length) {
+        src_alt = vk_img.sizes[0].src;
+      } else if ("photo_130" in vk_img) {
+        return vk_img.photo_130;
+      } else if ("photo_75" in vk_img) {
+        return vk_img.photo_75;
+      } else {
+        console.log(PluginName + ":getSelSizeUrl() - can't find vk image urls!");
+      }
+
+      for (var j = 0; j < szLiterPrefs.length; ++j) {
+        for (var i = 0; i < vk_img.sizes.length; ++i) {
+          if (vk_img.sizes[i].type == szLiterPrefs[j]) {
+            return vk_img.sizes[i].src;
+          }
         }
       }
+
       return src_alt;
     },
 
@@ -418,13 +459,8 @@ requires: jQuery, highslide
 
     ///handle click on thumbnail area
     onThumbClick: function (event, parent) {
-      var $this = $(this);
-      var $data = $this.data(PluginName);
-
-      //open original VK image in a pop-up window
-      var url = "//vk.com/photo" + $data.vk_img.owner_id + "_" + $data.vk_img.id;
-      var myWindow = window.open(url, 'vk_photo', parent.data(PluginName).VkPhotoPopupSettings, false);
-      myWindow.focus();
+      event.stopPropagation();
+      return false;
     },
 
     ///handle click on zoom icon
@@ -438,10 +474,10 @@ requires: jQuery, highslide
   $.fn.ThumbsViewer = function (method) {
     var args = arguments;
 
-    if (method == "getSelThumbsData") {
-      return thC.getSelThumbsData.apply(this);
-    } else if (method == "getSelThumbsNum") {
-      return thC.getSelThumbsCount.apply(this);
+    if (method == "getThumbsData") {
+      return thC.getThumbsData.apply(this, Array.prototype.slice.call(args, 1));
+    } else if (method == "getThumbsCount") {
+      return thC.getThumbsCount.apply(this, Array.prototype.slice.call(args, 1));
     } else if (method == "addThumbList") {
       return thC.addThumbList.apply(this, Array.prototype.slice.call(args, 1));
     }
