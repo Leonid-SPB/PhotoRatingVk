@@ -19,6 +19,7 @@ var Settings = {
   MaxFriendsList: 500,
   MaxLikeThresh: 1000,
   RatingRefreshDelay: 700,
+  WallAlbumId: -7,
 
   QueryUserFields: "first_name,last_name,screen_name,first_name_gen,last_name_gen",
 
@@ -32,6 +33,7 @@ var RPApi = {
   vkUserList: null,
   vkGroupList: null,
   vkIdEdit: null,
+  albumListSel: null,
   $totalPhotosSpan: null,
   $ratedPhotosSpan: null,
   $chosenPhotosSpan: null,
@@ -51,12 +53,14 @@ var RPApi = {
   goBtnTooltipRating: "Составить рейтинг фотографий",
   goBtnLabelSave: "Сохранить на стену",
   goBtnTooltipSave: "Сохранить рейтинг на стену",
+  EmptyIdGid: 0,
 
   init: function () {
     var self = RPApi;
     self.vkUserList = document.getElementById("vkUserList");
     self.vkGroupList = document.getElementById("vkGroupList");
     self.vkIdEdit = document.getElementById("vkIdEdit");
+    self.albumListSel = document.getElementById("Form1_AlbumList");
     self.$progressBar = $("#Progressbar");
     self.$totalPhotosSpan = $("#totalPhotosNum");
     self.$ratedPhotosSpan = $("#ratedPhotosNum");
@@ -144,15 +148,19 @@ var RPApi = {
       //url parameter when applicatiuon launched by a wall link
       var uidGid = Utils.sanitizeParameter(Utils.getParameterByName("uidGid", true));
 
-      //by default: select user itself in user list select
-      self.vkUserList.selectedIndex = 1;
-      self.onUserChanged();
+      function defaultInit() {
+        //by default: select user itself in user list select
+        self.vkUserList.selectedIndex = 1;
+        self.onUserChanged().always(function () {
+          self.busyFlag = false;
+          Utils.hideSpinner();
+          self.disableControls(0);
+        });
+      }
 
+      //normal mode, initialization finished here
       if (!uidGid) {
-        //normal mode, initialization finished
-        self.busyFlag = false;
-        Utils.hideSpinner();
-        self.disableControls(0);
+        defaultInit();
         return;
       }
 
@@ -160,9 +168,7 @@ var RPApi = {
       //try resolve provided ID
       self.resolveUidGid(uidGid).fail(function () {
         //failed to resolve ID
-        self.busyFlag = false;
-        Utils.hideSpinner();
-        self.disableControls(0);
+        defaultInit();
       }).done(function () {
         //if uidGid was valid, start building photo rating automatically
         self.onGoButtonClick(true);
@@ -180,6 +186,16 @@ var RPApi = {
     self.vkIdEdit.value = self.vkUserList.item(self.vkUserList.selectedIndex).value;
     self.vkGroupList.selectedIndex = 0;
     $("#goButton").button("option", "label", self.goBtnLabelRating);
+
+    if (self.vkUserList.selectedIndex) {
+      self.ownerId = self.friendMap[self.vkIdEdit.value].id;
+      $("#goButton").button("enable");
+    } else {
+      self.ownerId = self.EmptyIdGid;
+      $("#goButton").button("disable");
+    }
+
+    return self.updateAlbumListBox();
   },
 
   onGroupChanged: function () {
@@ -187,13 +203,93 @@ var RPApi = {
     self.vkIdEdit.value = self.vkGroupList.item(self.vkGroupList.selectedIndex).value;
     self.vkUserList.selectedIndex = 0;
     $("#goButton").button("option", "label", self.goBtnLabelRating);
+
+    if (self.vkGroupListt.selectedIndex) {
+      self.ownerId = -self.groupMap[self.vkIdEdit.value].id;
+      $("#goButton").button("enable");
+    } else {
+      self.ownerId = self.EmptyIdGid;
+      $("#goButton").button("disable");
+    }
+
+    return self.updateAlbumListBox();
   },
 
   onUidGidChanged: function () {
     var self = RPApi;
+
     self.vkUserList.selectedIndex = 0;
     self.vkGroupList.selectedIndex = 0;
+    self.ownerId = self.EmptyIdGid;
+    self.updateAlbumListBox(); //effectively clean albums listbox
+
     $("#goButton").button("option", "label", self.goBtnLabelRating);
+
+    if (!self.vkIdEdit.value.trim().length) {
+      $("#goButton").button("disable");
+      return;
+    }
+
+    self.disableControls(1);
+    Utils.showSpinner();
+
+    //resolve user/group
+    self.resolveUidGid(self.vkIdEdit.value).always(function () {
+      //already called onUserChanged/onGroupChanged at this point
+      self.busyFlag = false;
+      Utils.hideSpinner();
+      self.disableControls(0);
+    }).fail(function () {
+      $("#goButton").button("disable");
+    });
+  },
+
+  updateAlbumListBox: function (noSpinner) {
+    var self = RPApi;
+    var ddd = $.Deferred();
+    var albums = [];
+
+    function updateAlbumsListBox() {
+      self.albumListSel.selectedIndex = 0;
+
+      //remove old options, skip "not selected" option
+      for (var i = self.albumListSel.length - 1; i >= 1; --i) {
+        self.albumListSel.remove(i);
+      }
+
+      for (i = 0; i < albums.length; i++) {
+        //put service albums to the beginning
+        var index = null;
+        if ((albums[i].owner_id > 0) && (albums[i].id == Settings.ProfileAlbumId)) {
+          continue;
+        } else if (albums[i].id < 0) {
+          index = 1;
+        }
+        var opt = new Option(albums[i].title, albums[i].id, false, false);
+        $(opt).data("RPApi", albums[i]);
+        self.albumListSel.add(opt, index);
+      }
+    }
+
+    if (self.ownerId != self.EmptyIdGid) {
+      VkAppUtils.queryAlbumList({
+        owner_id: self.ownerId,
+        need_system: 1,
+        album_ids: (self.ownerId < 0) ? Settings.WallAlbumId : ""
+      }).done(function (resp) {
+        albums = resp;
+        updateAlbumsListBox();
+        ddd.resolve();
+      }).fail(function () {
+        updateAlbumsListBox();
+        ddd.reject();
+      });
+    } else {
+      updateAlbumsListBox();
+      ddd.resolve();
+    }
+
+    return ddd.promise();
   },
 
   onThreshSpinChange: function () {
@@ -246,6 +342,7 @@ var RPApi = {
     self.vkIdEdit.disabled = dval;
     self.vkUserList.disabled = dval;
     self.vkGroupList.disabled = dval;
+    self.albumListSel.disabled = dval;
     self.$ratingThreshSpin.spinner(dstr);
   },
 
@@ -262,6 +359,7 @@ var RPApi = {
 
     //cleanup
     self.disableControls(1);
+
     $("#ThumbsViewer").ThumbsViewer("empty");
     self.$progressBar.progressbar("value", 0);
     self.$totalPhotosSpan.text("0");
@@ -283,23 +381,12 @@ var RPApi = {
       Utils.hideSpinner();
     }
 
-    //no screen name, make rating for the user itself then
-    if (!self.vkIdEdit.value) {
-      self.vkUserList.selectedIndex = 1;
-      self.onUserChanged();
-    }
-
-    //take screen_name from edit box and resolve user data
-    self.resolveUidGid(self.vkIdEdit.value).done(function (userGroup, isUser) {
-      var ownerId_ = +userGroup.id;
-      self.ownerId = isUser ? ownerId_ : -ownerId_; //make negative ID for groups/pages
-
-      //if no album filter, do all photos rating
-      //else try to resolve album
-      self.collectAllPhotosRating().done(function () {
-        self.showRating().always(onAlways);
-      }).fail(onAlways);
+    //if no album filter, do all photos rating
+    //else try to resolve album
+    self.collectAllPhotosRating().done(function () {
+      self.showRating().always(onAlways);
     }).fail(onAlways);
+
   },
 
   showRating: function () {
@@ -435,14 +522,14 @@ var RPApi = {
     //tries to use cached data(friendMap/groupMap) before requesting server
     if (str in self.friendMap) {
       self.vkUserList.selectedIndex = self.friendMap[str].opt.index;
-      self.onUserChanged();
-
-      ddd.resolve(self.friendMap[str], true);
+      $.when(self.onUserChanged()).always(function () {
+        ddd.resolve(self.friendMap[str], true);
+      });
     } else if (str in self.groupMap) {
       self.vkGroupList.selectedIndex = self.groupMap[str].opt.index;
-      self.onGroupChanged();
-
-      ddd.resolve(self.groupMap[str], false);
+      $.when(self.onGroupChanged()).always(function () {
+        ddd.resolve(self.groupMap[str], false);
+      });
     } else {
       //provided screen_name was not found in local cache, requesting data from VK
       VkAppUtils.resolveUidGid(str).done(function (userGrp, isUser) {
@@ -454,7 +541,9 @@ var RPApi = {
 
           //make new item selected
           self.vkUserList.selectedIndex = 1;
-          self.onUserChanged();
+          $.when(self.onUserChanged()).always(function () {
+            ddd.resolve(userGrp, isUser);
+          });
         } else {
           //add new item to list select and cache
           userGrp.opt = new Option(userGrp.title, userGrp.screen_name, false, false);
@@ -463,10 +552,10 @@ var RPApi = {
 
           //make new item selected
           self.vkGroupList.selectedIndex = 1;
-          self.onGroupChanged();
+          $.when(self.onGroupChanged()).always(function () {
+            ddd.resolve(userGrp, isUser);
+          });
         }
-
-        ddd.resolve(userGrp, isUser);
       }).fail(function () {
         ddd.reject();
       });
