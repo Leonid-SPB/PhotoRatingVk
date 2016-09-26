@@ -6,7 +6,7 @@
 /* globals $, Utils, VkApiWrapper, VkAppUtils, VK*/
 
 var Settings = {
-  VkAppLocation: "https://vk.com/app5597335", //app5597335 - beta app
+  VkAppLocation: "https://vk.com/ratingphoto2", //app5597335 - beta app
   GetPhotosChunksSz: 200,
   ErrorHideAfter: 6000,
   MaxRatedPhotos: 500,

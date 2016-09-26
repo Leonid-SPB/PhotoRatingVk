@@ -1,13 +1,12 @@
 pending:
-) update wiki page and tutorial for new users
-) improve welcome dialog (link to help page), add tooltips?
-) test on all modern browsers: chrome, firefox, edge, ie
-
 ) video "how to use"
 ) donate button (disable ads)
 ) style tuning: better loadding gif, fonts, etc...
 
 done:
+x) update wiki page and tutorial for new users
+x) improve welcome dialog (link to help page), add tooltips?
+x) test on all modern browsers: chrome, firefox, edge, ie
 x) filter user input, drop tags (not really necessary)
 x) refactoring/cleanup (clean global namespace)
 x) limit number of simultaneously loading images
