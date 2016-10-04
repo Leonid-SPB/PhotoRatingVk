@@ -38,7 +38,7 @@ var VkApiWrapper = {
 
   //calls VK API method with specified parameters
   //returns Deferred.promise()
-  callVkApi: function (vkApiMethod, methodParams) {
+  callVkApi: function (vkApiMethod, methodParams, noTimeout) {
     var self = this;
     var d = $.Deferred();
     var retries = self.settings_.apiCallMaxRetries;
@@ -46,24 +46,26 @@ var VkApiWrapper = {
 
     function scheduleVkApiMethod() {
       self.rateLimiter_.schedule(function () {
-        setTimeout(function () {
-          //check if api call is still in progress
-          if (d.state() === "pending") {
-            if (retries-- > 0) {
-              console.log("VkApiWrapper: VK.API call timeout, rescheduling request");
-              timeout *= self.settings_.apiTmoutMultiplier;
-              scheduleVkApiMethod();
-            } else {
-              var e = {
-                error_msg: "VK.API call timeout, all retries failed"
-              };
-              console.log(e.error_msg);
-              d.reject(e);
+        if (!noTimeout) {
+          setTimeout(function () {
+            //check if api call is still in progress
+            if (d.state() === "pending") {
+              if (retries-- > 0) {
+                console.log("VkApiWrapper: VK.API call timeout, rescheduling request");
+                timeout *= self.settings_.apiTmoutMultiplier;
+                scheduleVkApiMethod();
+              } else {
+                var e = {
+                  error_msg: "VK.API call timeout, all retries failed"
+                };
+                console.log(e.error_msg);
+                d.reject(e);
+              }
             }
-          }
 
-          //else: no timeout, api call has finished
-        }, timeout);
+            //else: no timeout, api call has finished
+          }, timeout);
+        }
 
         VK.api(vkApiMethod, methodParams, function (data) {
           //don't resolve/reject again on duplicate request
@@ -96,7 +98,7 @@ var VkApiWrapper = {
     var self = this;
     var d = $.Deferred();
 
-    self.callVkApi("wall.post", options).fail(function (error) {
+    self.callVkApi("wall.post", options, true).fail(function (error) {
       error.error_msg = "Не удалось создать запись на стене!<br /><small>" + error.error_msg + "</small>";
       if (!silent) {
         self.settings_.errorHandler(error.error_msg);
