@@ -220,6 +220,7 @@ var RPApi = {
   onAlbumChanged: function () {
     var self = RPApi;
     $("#goButton").button("option", "label", self.goBtnLabelRating);
+    self.updateRatingLink();
   },
 
   onUserChanged: function () {
@@ -285,6 +286,14 @@ var RPApi = {
     });
   },
 
+  updateRatingLink: function () {
+    var self = RPApi;
+    var selIndex = self.albumListSel.selectedIndex;
+    self.albumId = self.albumListSel.item(selIndex).value;
+    var l = Settings.VkAppLocation + "?uidGid=" + self.vkIdEdit.value + "&albumId=" + self.albumId;
+    $("#RatingLinkBox").text(l);
+  },
+
   updateAlbumListBox: function (noSpinner) {
     var self = RPApi;
     var ddd = $.Deferred();
@@ -310,6 +319,8 @@ var RPApi = {
         $(opt).data("RPApi", albums[i]);
         self.albumListSel.add(opt, index);
       }
+
+      self.updateRatingLink();
     }
 
     if (self.ownerId != self.EmptyIdGid) {
