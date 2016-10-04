@@ -12,6 +12,7 @@ var Settings = {
   MaxRatedPhotos: 500,
   MaxTotalPhotos: 1000000,
   RateRequestDelay: 2000,
+  NoteHideAfter: 15000,
   BlinkDelay: 500,
   BlinkCount: 12,
   RedirectDelay: 3000,
@@ -19,6 +20,7 @@ var Settings = {
   MaxFriendsList: 500,
   MaxLikeThresh: 1000,
   RatingRefreshDelay: 700,
+  MaxSelectedThumbs: 10,
   WallAlbumId: -7,
 
   QueryUserFields: "first_name,last_name,screen_name,first_name_gen,last_name_gen",
@@ -50,6 +52,9 @@ var RPApi = {
   photosCount: 0,
   photosLoadedCnt: 0,
   photosFilteredCnt: 0,
+  wallPostTipDisplayed: false,
+  wallPostTipDisplayedKey: "wallPostTipDisplayed",
+
   goBtnLabelRating: "Рейтинг!",
   goBtnTooltipRating: "Составить рейтинг фотографий",
   goBtnLabelSave: "Сохранить на стену",
@@ -74,16 +79,7 @@ var RPApi = {
     $(self.vkGroupList).change(self.onGroupChangedEvent);
     $(self.albumListSel).change(self.onAlbumChanged);
     $("#goButton").click(self.onGoButtonClick);
-    $("#ThumbsViewer").on("click.RPApi", ".ThumbsViewer-thumb", function (event, parent) {
-      var $this = $(this);
-      var PluginName = 'ThumbsViewer';
-      var $data = $this.data(PluginName);
-
-      //open original VK image in a pop-up window
-      var url = "//vk.com/photo" + $data.vk_img.owner_id + "_" + $data.vk_img.id;
-      var myWindow = window.open(url, 'vk_photo', $("#ThumbsViewer").data(PluginName).VkPhotoPopupSettings, false);
-      myWindow.focus();
-    });
+    $("#ThumbsViewer").on("click.RPApi", ".ThumbsViewer-thumb", self.onThumbClick_openOrig);
 
     self.$ratingThreshSpin.on("spin", function (event, ui) {
       RPApi.onThreshSpinChange.call(self);
@@ -145,6 +141,13 @@ var RPApi = {
       }
     });
 
+    //query notifications info
+    VkApiWrapper.storageGet(self.wallPostTipDisplayedKey).done(function (data) {
+      if (data[self.wallPostTipDisplayedKey]) {
+        self.wallPostTipDisplayed = true;
+      }
+    });
+
     //when all info collected
     $.when(d0, d1, d2).done(function () {
       //url parameter when applicatiuon launched by a wall link
@@ -195,6 +198,25 @@ var RPApi = {
     });
   },
 
+  onThumbClick_openOrig: function (event, parent) {
+    var $this = $(this);
+    var PluginName = 'ThumbsViewer';
+    var $data = $this.data(PluginName);
+
+    //open original VK image in a pop-up window
+    var url = "//vk.com/photo" + $data.vk_img.owner_id + "_" + $data.vk_img.id;
+    var myWindow = window.open(url, 'vk_photo', $("#ThumbsViewer").data(PluginName).VkPhotoPopupSettings, false);
+    myWindow.focus();
+  },
+
+  onThumbClick_selectThumb: function (event, parent) {
+    var $this = $(this);
+
+    if (($("#ThumbsViewer").ThumbsViewer("getThumbsCount").selected < Settings.MaxSelectedThumbs) || ($this.hasClass("selected"))) {
+      $("#ThumbsViewer").ThumbsViewer("selectToggle", $this);
+    }
+  },
+
   onUserChangedEvent: function () {
     var self = RPApi;
 
@@ -220,6 +242,11 @@ var RPApi = {
   onAlbumChanged: function () {
     var self = RPApi;
     $("#goButton").button("option", "label", self.goBtnLabelRating);
+    $("#ThumbsViewer").off("click.RPApi", ".ThumbsViewer-thumb");
+    $("#ThumbsViewer").on("click.RPApi", ".ThumbsViewer-thumb", self.onThumbClick_openOrig);
+    $("#ThumbsViewer").ThumbsViewer("selectNone");
+
+    self.updateRatingLink();
   },
 
   onUserChanged: function () {
@@ -227,6 +254,9 @@ var RPApi = {
     self.vkIdEdit.value = self.vkUserList.item(self.vkUserList.selectedIndex).value;
     self.vkGroupList.selectedIndex = 0;
     $("#goButton").button("option", "label", self.goBtnLabelRating);
+    $("#ThumbsViewer").off("click.RPApi", ".ThumbsViewer-thumb");
+    $("#ThumbsViewer").on("click.RPApi", ".ThumbsViewer-thumb", self.onThumbClick_openOrig);
+    $("#ThumbsViewer").ThumbsViewer("selectNone");
 
     if (self.vkUserList.selectedIndex) {
       self.ownerId = self.friendMap[self.vkIdEdit.value].id;
@@ -244,6 +274,9 @@ var RPApi = {
     self.vkIdEdit.value = self.vkGroupList.item(self.vkGroupList.selectedIndex).value;
     self.vkUserList.selectedIndex = 0;
     $("#goButton").button("option", "label", self.goBtnLabelRating);
+    $("#ThumbsViewer").off("click.RPApi", ".ThumbsViewer-thumb");
+    $("#ThumbsViewer").on("click.RPApi", ".ThumbsViewer-thumb", self.onThumbClick_openOrig);
+    $("#ThumbsViewer").ThumbsViewer("selectNone");
 
     if (self.vkGroupList.selectedIndex) {
       self.ownerId = -self.groupMap[self.vkIdEdit.value].id;
@@ -265,6 +298,9 @@ var RPApi = {
     self.updateAlbumListBox(); //effectively clean albums listbox
 
     $("#goButton").button("option", "label", self.goBtnLabelRating);
+    $("#ThumbsViewer").off("click.RPApi", ".ThumbsViewer-thumb");
+    $("#ThumbsViewer").on("click.RPApi", ".ThumbsViewer-thumb", self.onThumbClick_openOrig);
+    $("#ThumbsViewer").ThumbsViewer("selectNone");
 
     if (!self.vkIdEdit.value.trim().length) {
       $("#goButton").button("disable");
@@ -283,6 +319,14 @@ var RPApi = {
     }).fail(function () {
       $("#goButton").button("disable");
     });
+  },
+
+  updateRatingLink: function () {
+    var self = RPApi;
+    var selIndex = self.albumListSel.selectedIndex;
+    self.albumId = self.albumListSel.item(selIndex).value;
+    var l = Settings.VkAppLocation + "?uidGid=" + self.vkIdEdit.value + "&albumId=" + self.albumId;
+    $("#RatingLinkBox").text(l);
   },
 
   updateAlbumListBox: function (noSpinner) {
@@ -310,6 +354,8 @@ var RPApi = {
         $(opt).data("RPApi", albums[i]);
         self.albumListSel.add(opt, index);
       }
+
+      self.updateRatingLink();
     }
 
     if (self.ownerId != self.EmptyIdGid) {
@@ -485,9 +531,18 @@ var RPApi = {
         //if rating was not empty, ask user to rate application
         //and enable "share" button
         if (photos.length > 10) {
-          VkAppUtils.rateRequest(Settings.RateRequestDelay);
+          VkAppUtils.rateRequest(Settings.RateRequestDelay).done(function () {
+            if ((!self.wallPostTipDisplayed)) {
+              self.displayNote("<strong>Совет:</strong> Щелчком мыши можно выделить до " + Settings.MaxSelectedThumbs + " лучших фотографий, чтобы сохранить себе на стену.", Settings.NoteHideAfter);
+              self.wallPostTipDisplayed = true;
+              VkApiWrapper.storageSet(self.wallPostTipDisplayedKey, "1");
+            }
+          });
         }
+
         $("#goButton").button("option", "label", self.goBtnLabelSave);
+        $("#ThumbsViewer").off("click.RPApi", ".ThumbsViewer-thumb");
+        $("#ThumbsViewer").on("click.RPApi", ".ThumbsViewer-thumb", self.onThumbClick_selectThumb);
       });
     }).fail(function () {
       ddd.reject();
@@ -683,8 +738,21 @@ var RPApi = {
       return;
     }
 
-    var attachments = /*"photo-45558877_428286179," + */ Settings.VkAppLocation + "?uidGid=" + self.vkIdEdit.value + "&albumId=" + self.albumId;
-    var guid = "app5597335-" + self.vkIdEdit.value + self.albumId;
+    //attach selected photos or attach first Settings.MaxSelectedThumbs photos
+    var selectedCnt = $("#ThumbsViewer").ThumbsViewer("getThumbsCount").selected;
+    var $thumbListm = $("#ThumbsViewer").ThumbsViewer("getThumbsData", selectedCnt > 0);
+    $thumbListm = $thumbListm.slice(0, Settings.MaxSelectedThumbs);
+
+    var attachments = "";
+    var guid = "";
+    for (var j = 0; j < $thumbListm.length; ++j) {
+      attachments += "photo" + $thumbListm[j].data.vk_img.owner_id + "_" + $thumbListm[j].data.vk_img.id + ",";
+      guid += $thumbListm[j].data.vk_img.id;
+    }
+
+    var link = Settings.VkAppLocation + "?uidGid=" + self.vkIdEdit.value + "&albumId=" + self.albumId;
+    message += " " + link;
+    //attachments += Settings.VkAppLocation + "_" + Settings.vkUserId + "?uidGid=" + self.vkIdEdit.value + "&albumId=" + self.albumId;
 
     //request to make a wall post
     VkApiWrapper.wallPost({
@@ -768,6 +836,15 @@ var RPApi = {
     VkAppUtils.displayError(errMsg, "GlobalErrorBox", Settings.ErrorHideAfter);
   },
 
+  displayNote: function (noteMsg, hideDelay) {
+    if (!hideDelay) {
+      VkAppUtils.displayNote(noteMsg, "NoteBox", Settings.NoteHideAfter);
+    } else {
+      VkAppUtils.displayNote(noteMsg, "NoteBox", hideDelay);
+    }
+
+  },
+
 };
 
 //Initialize application
@@ -778,7 +855,7 @@ $(function () {
   VkAppUtils.validateApp(Settings.vkSid, Settings.VkAppLocation, Settings.RedirectDelay);
 
   $("#ThumbsViewer").ThumbsViewer({
-    disableSel: true
+    disableSel: false
   });
   $("#Progressbar").progressbar({
     value: 0
