@@ -19,6 +19,7 @@ var Settings = {
   MaxGroupNameLen: 40,
   MaxFriendsList: 500,
   MaxLikeThresh: 1000,
+  DefaultLikesThresh: 1,
   RatingRefreshDelay: 700,
   MaxSelectedThumbs: 10,
   WallAlbumId: -7,
@@ -94,6 +95,9 @@ var RPApi = {
         Utils.showSpinner();
       }
     });
+
+    Settings.likedThresh = Settings.DefaultLikesThresh;
+    self.$ratingThreshSpin.spinner("value", Settings.likedThresh);
 
     //query information about application user
     var d0 = VkApiWrapper.queryUser({
@@ -257,6 +261,8 @@ var RPApi = {
     $("#ThumbsViewer").off("click.RPApi", ".ThumbsViewer-thumb");
     $("#ThumbsViewer").on("click.RPApi", ".ThumbsViewer-thumb", self.onThumbClick_openOrig);
     $("#ThumbsViewer").ThumbsViewer("selectNone");
+    Settings.likedThresh = Settings.DefaultLikesThresh;
+    self.$ratingThreshSpin.spinner("value", Settings.likedThresh);
 
     if (self.vkUserList.selectedIndex) {
       self.ownerId = self.friendMap[self.vkIdEdit.value].id;
@@ -277,6 +283,8 @@ var RPApi = {
     $("#ThumbsViewer").off("click.RPApi", ".ThumbsViewer-thumb");
     $("#ThumbsViewer").on("click.RPApi", ".ThumbsViewer-thumb", self.onThumbClick_openOrig);
     $("#ThumbsViewer").ThumbsViewer("selectNone");
+    Settings.likedThresh = Settings.DefaultLikesThresh;
+    self.$ratingThreshSpin.spinner("value", Settings.likedThresh);
 
     if (self.vkGroupList.selectedIndex) {
       self.ownerId = -self.groupMap[self.vkIdEdit.value].id;
